@@ -1,1 +1,13 @@
-{"datasets": []}
+{
+  "datasets": [
+    {
+      "id": "analyzer-7768d51ac80e4fffaa2a28d17ed821ae",
+      "label": "M1 Radiologie",
+      "json": [
+        "datasets/analyzer-7768d51ac80e4fffaa2a28d17ed821ae/data.annotated.json"
+      ],
+      "enabled": true,
+      "zip": "datasets/analyzer-7768d51ac80e4fffaa2a28d17ed821ae/question-images.zip"
+    }
+  ]
+}

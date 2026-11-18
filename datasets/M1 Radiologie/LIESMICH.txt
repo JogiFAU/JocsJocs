@@ -1,0 +1,3 @@
+Anzeige-App 3.9.8: Diesen gesamten Ordner unverändert nach datasets/ kopieren.
+Danach den Inhalt von manifest-entry.example.json als einen Eintrag in die datasets-Liste von datasets/manifest.json übernehmen. Vorhandene Einträge behalten; dieselbe id nicht doppelt einfügen. Die Pfade sind fertig und relativ zum App-Verzeichnis.
+App über HTTP starten und neu laden, Datensatz auswählen und laden. Annotationen und bestätigte Altfragengruppen sind gemeinsam in data.annotated.json enthalten. Technische Fehler und ungeprüfte Kandidaten bleiben unverändert.
