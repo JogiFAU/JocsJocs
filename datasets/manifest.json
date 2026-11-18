@@ -4,7 +4,7 @@
       "id": "analyzer-7768d51ac80e4fffaa2a28d17ed821ae",
       "label": "M1 Radiologie",
       "json": [
-        "datasets/M1 Radiologie/data.annotated.json"
+        "datasets/M1 Radiologie/result.annotated.json"
       ],
       "enabled": true,
       "zip": "datasets/M1 Radiologie/question-images.zip"
