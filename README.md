@@ -1,3 +1,7 @@
+# Aktueller Stand: Anzeige-App 3.9.8
+
+Import und Archivstruktur: siehe [DATENARCHIV_3.9.8.md](DATENARCHIV_3.9.8.md).
+
 # Exam Generator (DocsDocs, nur anders und besser)
 
 Statische, browserbasierte Lern- und Prüfungs-App für Klausurfragen – optimiert für GitHub Pages.
