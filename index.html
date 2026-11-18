@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>JocsJocs 2.0</title>
+
+  <link rel="stylesheet" href="./assets/styles.css" />
+
+  <!-- JSZip (für Bilder-ZIP). Wenn CDN blockiert ist, läuft die App ohne ZIP-Bilder weiter. -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="top__left">
+    <div class="top__title">JocsJocs 2.0</div>
+    <div class="top__subtitle" id="headerSubtitle">Datensatz laden und Abfrage konfigurieren</div>
+  </div>
+
+  <div class="top__right">
+    <div class="top__stats">
+      <div class="top__stat">
+        <div class="top__statLabel">Fortschritt</div>
+        <div class="top__statValue" id="headerProgressText">—</div>
+      </div>
+      <div class="top__stat">
+        <div class="top__statLabel">Richtig</div>
+        <div class="top__statValue" id="headerCorrectPct">—</div>
+      </div>
+    </div>
+    <div class="progress">
+      <div id="headerProgressBar"></div>
+    </div>
+  </div>
+</header>
+
+<div id="toast" class="toast" hidden></div>
+
+<div class="wrap">
+  <aside class="card">
+
+    <!-- CONFIG SIDEBAR -->
+    <section id="sidebarConfig">
+      <section class="majorBlock">
+      <h2>1) Setup</h2>
+
+      <label for="datasetSelect">Datensatz</label>
+      <div class="row">
+        <select id="datasetSelect"></select>
+        <button class="btn primary" id="loadDatasetBtn">Datensatz laden</button>
+      </div>
+      <div class="small" id="datasetMetaHint" style="margin-top:8px;">Kein Datensatz geladen</div>
+      <div class="aiIntroBox" style="margin-top:10px;">
+        <strong>🤖 KI-Erklärungen:</strong>
+        <div class="small">
+          Zu jeder Frage wird mit der richtigen Lösung auch eine KI-generierte Einordnung angezeigt.
+          Die ergänzenden Hinweise zu den jeweiligen Antwortoptionen können durch tippen/hovern auf diese angezeigt werden.
+        </div>
+      </div>
+      </section>
+
+      <section class="majorBlock">
+      <h2>2) Arbeitsmodus</h2>
+      <div class="tabs">
+        <button class="tab" id="tabQuiz" type="button">Abfragemodus</button>
+        <button class="tab" id="tabSearch" type="button">Fragen durchsuchen</button>
+      </div>
+      </section>
+
+      <!-- QUIZ CONFIG -->
+      <section id="configQuiz" class="majorBlock">
+        <h2>3) Abfragemodus konfigurieren</h2>
+
+        <div class="configSubgroup">
+          <details class="filterSection" open>
+            <summary class="filterSection__summary">Klausurauswahl</summary>
+            <div id="examListQuiz" class="examlist"></div>
+          </details>
+        </div>
+
+        <div class="configSubgroup">
+          <details class="filterSection" open>
+            <summary class="filterSection__summary">Themenauswahl</summary>
+            <div id="topicListQuiz" class="examlist"></div>
+          </details>
+        </div>
+
+        <div class="configSubgroup">
+        <div class="subhead">Weitere Filter</div>
+        <div class="filterbox">
+          <label>Bilder</label>
+          <select id="imageFilterQuiz">
+            <option value="all">Alle</option>
+            <option value="with">Nur Fragen mit Bildern</option>
+            <option value="without">Nur Fragen ohne Bilder</option>
+          </select>
+
+          <label class="checkrow">
+            <input id="wrongOnlyQuiz" type="checkbox" />
+            <span id="wrongOnlyQuizLabel">Nur aktuell falsch beantwortete Fragen</span>
+          </label>
+
+          <div>
+            <label>Zufällige Fragen aus Auswahl:</label>
+            <input id="randomN" type="number" min="1" placeholder="leer = alle" />
+          </div>
+
+          <label>Schlagwort-Filter</label>
+          <input id="keywordFilter" type="text" placeholder="z.B. Diazepam, Hypertonie, Trisomie…" />
+
+          <label class="checkrow">
+            <input id="keywordInAnswers" type="checkbox" />
+            <span>Auch in Antwortmöglichkeiten suchen</span>
+          </label>
+        </div>
+        </div>
+
+        <div class="configSubgroup">
+        <div class="subhead">Abfrageeinstellungen</div>
+        <div class="filterbox">
+          <select id="quizMode">
+            <option value="practice">Übungsmodus (Feedback sofort)</option>
+            <option value="exam">Prüfungsmodus (Feedback am Ende)</option>
+          </select>
+
+          <label class="checkrow">
+            <input id="shuffleQuestions" type="checkbox" />
+            <span>Fragenreihenfolge mischen</span>
+          </label>
+
+          <label class="checkrow">
+            <input id="shuffleAnswers" type="checkbox" />
+            <span>Antwortoptionen mischen</span>
+          </label>
+
+          <label class="checkrow">
+            <input id="showTopicsInBanner" type="checkbox" checked />
+            <span>Themen im Frage-Banner anzeigen</span>
+          </label>
+
+          <label class="checkrow">
+            <input id="aiModeEnabled" type="checkbox" />
+            <span>AI-Modus 🤖: rekonstruierte Fragen verwenden (wenn verfügbar)</span>
+          </label>
+        </div>
+        </div>
+
+        <div class="row2" style="margin-top:12px;">
+          <button class="btn cta" id="startQuizBtn">Abfrage starten</button>
+          <button class="btn subtle" id="resetConfigQuizBtn" type="button">Zurücksetzen</button>
+        </div>
+      </section>
+
+      <!-- SEARCH CONFIG -->
+      <section id="configSearch" class="majorBlock" hidden>
+        <h2>3) Suchmodus konfigurieren</h2>
+
+        <div class="configSubgroup">
+          <details class="filterSection" open>
+            <summary class="filterSection__summary">Klausurauswahl</summary>
+            <div id="examListSearch" class="examlist"></div>
+          </details>
+        </div>
+
+        <div class="configSubgroup">
+          <details class="filterSection" open>
+            <summary class="filterSection__summary">Themenauswahl</summary>
+            <div id="topicListSearch" class="examlist"></div>
+          </details>
+        </div>
+
+        <div class="configSubgroup">
+        <div class="subhead">Filterkriterien</div>
+        <div class="filterbox">
+          <label>Bilder</label>
+          <select id="imageFilterSearch">
+            <option value="all">Alle Fragen</option>
+            <option value="with">Nur Fragen mit Bildern</option>
+            <option value="without">Nur Fragen ohne Bilder</option>
+          </select>
+
+          <label>Suche</label>
+          <input id="searchText" type="text" placeholder="Suchbegriff für den Suchmodus (z.B. Trisomie, Hardy-Weinberg, ...)" />
+
+          <label class="checkrow">
+            <input id="searchInAnswers" type="checkbox" />
+            <span>Auch in Antwortmöglichkeiten suchen</span>
+          </label>
+
+          <label class="checkrow">
+            <input id="wrongOnlySearch" type="checkbox" />
+            <span id="wrongOnlySearchLabel">Nur aktuell falsch beantwortete Fragen</span>
+          </label>
+
+          <label class="checkrow">
+            <input id="onlyAiModifiedSearch" type="checkbox" />
+            <span>Nur KI-modifizierte Fragen</span>
+          </label>
+        </div>
+        </div>
+
+        <div class="configSubgroup">
+        <div class="subhead">Anzeigeoptionen</div>
+        <div class="filterbox">
+          <label class="checkrow">
+            <input id="searchShowSolutions" type="checkbox" />
+            <span>Lösungen anzeigen</span>
+          </label>
+        </div>
+        </div>
+
+        <div class="row2" style="margin-top:12px;">
+          <button class="btn primary" id="startSearchBtn">Suche aktualisieren</button>
+          <button class="btn" id="resetConfigSearchBtn" type="button">Zurücksetzen</button>
+        </div>
+      </section>
+
+      <hr class="sep">
+
+      <section id="displayControlsConfig">
+      <h2>4) Anzeige</h2>
+      <div class="row2">
+        <div>
+          <label>Pro Seite</label>
+          <input id="pageSize" type="number" min="10" max="300" value="50" />
+        </div>
+        <div>
+          <label>Seite</label>
+          <input id="pageNumber" type="number" min="1" value="1" />
+        </div>
+      </div>
+
+      <div class="pager">
+        <button class="btn" id="prevPage" type="button">←</button>
+        <button class="btn" id="nextPage" type="button">→</button>
+        <span class="small" id="pageInfo"></span>
+      </div>
+      </section>
+
+      <hr class="sep">
+
+      <details>
+        <summary><h2 style="display:inline; margin:0;">Lokale Daten</h2></summary>
+        <div style="margin-top:10px;">
+          <label>Gespeicherte Abfragen (dieser Datensatz)</label>
+          <select id="savedSessionsSelect" size="4"></select>
+          <div class="row2" style="margin-top:10px;">
+            <button class="btn danger" id="deleteSessionBtn" type="button">Löschen</button>
+            <button class="btn danger" id="clearAllLocalDataBtn" type="button">Alles löschen</button>
+          </div>
+
+          <label style="margin-top:12px;">Lokal modifizierte Fragen</label>
+          <select id="localOverridesSelect" size="4"></select>
+          <div class="row2" style="margin-top:10px;">
+            <button class="btn danger" id="deleteLocalOverrideBtn" type="button">Löschen</button>
+            <button class="btn danger" id="clearLocalOverridesBtn" type="button">Alle löschen</button>
+          </div>
+
+          <details style="margin-top:10px;">
+            <summary>Backup (optional)</summary>
+            <div class="row2" style="margin-top:10px;">
+              <button class="btn" id="downloadBackupBtn" type="button">Backup herunterladen</button>
+              <label class="btn" style="cursor:pointer;">
+                Backup importieren
+                <input id="importBackupFile" type="file" accept=".json,application/json" style="display:none;">
+              </label>
+            </div>
+            <div class="small" style="margin-top:8px;">
+              Ergebnisse werden im Browser gespeichert (localStorage). Import/Export ist optional für Gerätewechsel.
+            </div>
+          </details>
+
+          <details style="margin-top:10px;">
+            <summary>Darstellung (Theme)</summary>
+            <div style="margin-top:10px;">
+              <label for="themeSelect">Theme</label>
+              <select id="themeSelect" aria-label="Theme auswählen">
+                <option value="spezi">Spezi</option>
+                <option value="dark">Dark Mode</option>
+              </select>
+            </div>
+          </details>
+        </div>
+      </details>
+    </section>
+
+    <!-- QUIZ/REVIEW SIDEBAR -->
+    <section id="sidebarSession" hidden>
+      <h2>Navigation</h2>
+      <div class="small" id="sessionHint">Abfrage läuft.</div>
+
+      <div class="row2" style="margin-top:10px;">
+        <button class="btn primary" id="endQuizBtn" type="button">Zur Auswertung</button>
+        <button class="btn danger" id="abortQuizBtn" type="button">Abfrage abbrechen</button>
+      </div>
+
+      <div class="row2" id="reviewRepeatActions" style="margin-top:10px;" hidden>
+        <button class="btn" id="repeatQuizBtn" type="button">Abfrage wiederholen</button>
+        <button class="btn" id="repeatWrongQuizBtn" type="button">Nur falsche wiederholen</button>
+      </div>
+
+      <hr class="sep">
+
+      <h2>Inhaltsverzeichnis</h2>
+      <div class="small" id="tocSummary">—</div>
+      <div id="tocList" class="toc"></div>
+
+      <hr class="sep">
+
+      <section id="displayControlsSession">
+      <h2>Anzeige</h2>
+      <div class="row2">
+        <div>
+          <label>Pro Seite</label>
+          <input id="pageSize2" type="number" min="10" max="300" value="50" />
+        </div>
+        <div>
+          <label>Seite</label>
+          <input id="pageNumber2" type="number" min="1" value="1" />
+        </div>
+      </div>
+
+      <div class="pager">
+        <button class="btn" id="prevPage2" type="button">←</button>
+        <button class="btn" id="nextPage2" type="button">→</button>
+        <span class="small" id="pageInfo2"></span>
+      </div>
+      </section>
+    </section>
+
+  </aside>
+
+  <main class="card">
+    <div class="small" id="mainInfo">Noch keine Daten geladen.</div>
+    <hr class="sep">
+    <div class="qwrap" id="questionList"></div>
+  </main>
+</div>
+
+<button id="jumpToNavBtn" class="fab" type="button" hidden>↑ Navigation</button>
+
+
+<dialog id="clusterQuestionsDialog" class="appdialog appdialog--wide">
+  <div class="appdialog__form">
+    <div class="appdialog__head">
+      <div>
+        <h3 id="clusterDialogTitle" class="appdialog__title">Verwandte Fragen</h3>
+        <p id="clusterDialogSubtitle" class="appdialog__message"></p>
+        <div class="clusterDialog__toggles">
+          <label class="clusterDialog__toggle" for="clusterDialogShowExplanations">
+            <input id="clusterDialogShowExplanations" type="checkbox" checked />
+            <span>Erklärungen anzeigen</span>
+          </label>
+          <label class="clusterDialog__toggle" for="clusterDialogShowSolutions">
+            <input id="clusterDialogShowSolutions" type="checkbox" checked />
+            <span>Lösungen anzeigen</span>
+          </label>
+        </div>
+      </div>
+      <button id="clusterDialogClose" class="appdialog__close" type="button" aria-label="Fenster schließen">✕</button>
+    </div>
+    <div id="clusterDialogBody" class="clusterDialogBody"></div>
+  </div>
+</dialog>
+
+<dialog id="questionEditorDialog" class="appdialog appdialog--wide">
+  <form method="dialog" class="appdialog__form">
+    <div class="appdialog__head">
+      <div>
+        <h3 id="questionEditorTitle" class="appdialog__title">Frage bearbeiten</h3>
+        <p class="appdialog__message">Lokale Änderungen werden nur in diesem Browser gespeichert.</p>
+      </div>
+      <button id="questionEditorClose" class="appdialog__close" type="submit" value="cancel" aria-label="Fenster schließen">✕</button>
+    </div>
+    <div class="clusterDialogBody">
+      <label>Fragetext</label>
+      <textarea id="editorQuestionText" rows="4"></textarea>
+      <div id="editorAnswersWrap"></div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" id="editorAddAnswerBtn" type="button">+ Antwortoption</button>
+      </div>
+      <div id="editorImagePreview" class="editorImagePreview"></div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" id="editorDatasetImageBtn" type="button">Bild auswählen (aus Datensatz)</button>
+        <label class="btn" for="editorUploadInput">Bild hochladen</label>
+        <input id="editorUploadInput" type="file" accept="image/*" hidden />
+        <button class="btn" id="editorDeleteImageBtn" type="button">Bild löschen</button>
+      </div>
+    </div>
+    <div class="appdialog__actions">
+      <button class="btn" type="submit" value="cancel">Abbrechen</button>
+      <button class="btn primary" id="editorSaveBtn" type="button">Lokal speichern</button>
+    </div>
+  </form>
+</dialog>
+
+
+<dialog id="datasetImagePickerDialog" class="appdialog appdialog--wide">
+  <form method="dialog" class="appdialog__form">
+    <div class="appdialog__head">
+      <div>
+        <h3 class="appdialog__title">Bild aus Datensatz auswählen</h3>
+        <p class="appdialog__message">Wähle ein Bild, das als lokale Bildreferenz für diese Frage gespeichert werden soll.</p>
+      </div>
+      <button class="appdialog__close" type="submit" value="cancel" aria-label="Fenster schließen">✕</button>
+    </div>
+    <div id="datasetImagePickerBody" class="clusterDialogBody"></div>
+    <div class="appdialog__actions">
+      <button class="btn" type="submit" value="cancel">Schließen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="appConfirmDialog" class="appdialog">
+  <form method="dialog" class="appdialog__form">
+    <h3 id="appConfirmTitle" class="appdialog__title">Bestätigung</h3>
+    <p id="appConfirmMessage" class="appdialog__message"></p>
+    <div class="appdialog__actions">
+      <button class="btn" type="submit" value="cancel" id="appConfirmCancelBtn">Abbrechen</button>
+      <button class="btn danger" type="submit" value="confirm" id="appConfirmOkBtn">Bestätigen</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

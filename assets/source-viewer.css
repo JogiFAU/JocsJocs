@@ -1,0 +1,18 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; background: #f1f4f8; color: #182536; }
+* { box-sizing: border-box; } body { margin:0; display:grid; grid-template-columns:270px minmax(0,1fr); min-height:100vh; }
+aside { background:#17273c; color:#fff; padding:20px; height:100vh; position:sticky; top:0; overflow:auto; }
+h1,h2 { font-size:1.15rem; margin:0 0 12px; } nav { display:grid; gap:10px; }
+nav button { background:#263c56; border:1px solid #61748c; color:#fff; padding:12px; text-align:left; overflow-wrap:anywhere; }
+nav button[aria-current="page"] { border-color:#9eceff; background:#345a80; box-shadow:inset 3px 0 #b4dcff; }
+button,select { font:inherit; border-radius:6px; padding:7px 10px; cursor:pointer; } button:disabled { cursor:default; opacity:.45; }
+button:focus-visible,select:focus-visible { outline:3px solid #d58c00; outline-offset:2px; }
+main { min-width:0; padding:20px; } header { background:#fff; border-radius:10px; padding:16px; margin-bottom:16px; }
+.toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; } #status { font-size:.9rem; margin-bottom:0; }
+#page-stage { background:#dce2eb; padding:12px; overflow:auto; border-radius:8px; min-height:160px; max-height:78vh; }
+#page-image { display:block; width:100%; height:auto; margin:auto; } [hidden] { display:none!important; }
+#details { margin-top:20px; background:#fff; border-radius:10px; padding:16px; }
+#regions { display:grid; gap:16px; } .region img { max-width:100%; max-height:50vh; object-fit:contain; }
+blockquote { white-space:pre-wrap; margin:10px 0; padding:12px; border-left:3px solid #51779e; overflow-wrap:anywhere; }
+#provenance { margin-top:16px; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.8rem; }
+@media(prefers-color-scheme:dark) { :root { background:#142031; color:#edf4ff; } header,#details { background:#213149; } #page-stage { background:#0d1725; } }
+@media(max-width:700px) { body { grid-template-columns:1fr; } aside { position:static; height:auto; max-height:32vh; padding:12px; } main { padding:12px; } }

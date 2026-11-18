@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quellenviewer</title><link rel="stylesheet" href="assets/source-viewer.css"></head>
+<body><aside><h1>Quellen</h1><p id="source-count"></p><nav id="sources" aria-label="Geprüfte Quellen"></nav></aside>
+<main><header><h2 id="title">Quellenviewer</h2><div class="toolbar">
+<button id="previous" type="button" disabled>← Seite −</button><span id="page-label"></span><button id="next" type="button" disabled>Seite + →</button>
+<label>Ansicht <select id="zoom"><option value="fit">Seitenbreite</option><option value="100">100 %</option><option value="150">150 %</option><option value="200">200 %</option></select></label>
+<button id="return" type="button" hidden>Zur zitierten Seite</button></div><p id="status" role="status"></p></header>
+<div id="page-stage"><img id="page-image" alt="" hidden><p id="empty"></p></div>
+<section id="details" hidden><h2>Zitierte Bereiche und Originalstellen</h2><div id="regions"></div></section>
+<details id="provenance"><summary>Quellenadresse</summary><pre id="address"></pre></details>
+</main><script type="module" src="src/ui/sourceViewer.js"></script></body></html>
