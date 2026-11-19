@@ -3,21 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>JocsJocs 4.0</title>
+  <title>JocsJocs 4.1</title>
 
   <link rel="stylesheet" href="./assets/styles.css" />
 
-  <!-- JSZip (für Bilder-ZIP). Wenn CDN blockiert ist, läuft die App ohne ZIP-Bilder weiter. -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- Lokal beigelegtes JSZip für die Fragebilder-ZIP. -->
+  <script src="./assets/vendor/jszip/jszip.min.js"></script>
 </head>
 <body>
 
 <header class="top">
   <div class="top__left">
-    <div class="top__title">JocsJocs 4.0</div>
-    <div class="top__subtitle" id="headerSubtitle">Datensatz laden und Abfrage konfigurieren</div>
+    <div class="top__title">JocsJocs 4.1</div>
+    <div class="top__subtitle" id="headerSubtitle">Fach laden und Abfragen verwalten</div>
   </div>
 
+  <nav id="queryHeaderActions" class="queryHeaderActions" aria-label="Neue Abfrage" hidden><button id="newQueryBtn" class="btn" type="button">Neue Abfrage konfigurieren</button><button id="newImpactQueryBtn" class="btn" type="button">High-Impact-Abfrage</button></nav>
   <div class="top__right">
     <div class="top__stats">
       <div class="top__stat">
@@ -42,35 +43,47 @@
 
     <!-- CONFIG SIDEBAR -->
     <section id="sidebarConfig">
-      <section class="majorBlock">
-      <h2>1) Setup</h2>
+      <section class="majorBlock" id="setupBlock">
+      <h2>Setup</h2>
 
-      <label for="datasetSelect">Datensatz</label>
+      <label for="datasetSelect">Fach</label>
       <div class="row">
         <select id="datasetSelect"></select>
-        <button class="btn primary" id="loadDatasetBtn">Datensatz laden</button>
+        <button class="btn primary" id="loadDatasetBtn">Fach laden</button>
       </div>
-      <div class="small" id="datasetMetaHint" style="margin-top:8px;">Kein Datensatz geladen</div>
-      <div class="aiIntroBox" style="margin-top:10px;">
-        <strong>🤖 KI-Erklärungen:</strong>
-        <div class="small">
-          Zu jeder Frage wird mit der richtigen Lösung auch eine KI-generierte Einordnung angezeigt.
-          Die ergänzenden Hinweise zu den jeweiligen Antwortoptionen können durch tippen/hovern auf diese angezeigt werden.
-        </div>
-      </div>
+      <div class="small" id="datasetMetaHint" style="margin-top:8px;">Kein Fach geladen</div>
+
       </section>
 
-      <section class="majorBlock">
-      <h2>2) Arbeitsmodus</h2>
+      <section class="majorBlock" id="workflowMenu" hidden>
+      <h2>Übersicht</h2>
       <div class="tabs">
-        <button class="tab" id="tabQuiz" type="button">Abfragemodus</button>
+        <button class="tab" id="tabQuiz" type="button">Abfragen</button>
         <button class="tab" id="tabSearch" type="button">Fragen durchsuchen</button>
       </div>
+      <button class="btn" id="backOverviewBtn" type="button" hidden>Zur Übersicht</button>
+      </section>
+
+      <section id="learningProgress" class="majorBlock" hidden aria-label="Lernstand im Fach"></section>
+
+      <section id="studyPanel" class="majorBlock" hidden>
+        <h2>High-Impact-Abfrage</h2>
+        <label for="studyTarget">Zielquote (%)</label>
+        <input id="studyTarget" type="number" min="1" max="100" step="1" value="60" />
+        <label for="studyNominal">Erwartete Fragen pro Klausur</label>
+        <input id="studyNominal" type="number" min="1" max="1000" step="1" value="30" />
+        <label for="studyScope">Berücksichtigte Klausuren</label>
+        <select id="studyScope"><option value="allExams">Alle</option><option value="recent">5 neueste Klausuren</option><option value="filtered">Aus Abfragefilter</option></select>
+        <p class="small">Die Zielquote gilt in jeder berücksichtigten Klausur für ihre vorhandenen Fragen. Eine Referenzfrage steht für eine ganze Aufgabenfamilie.</p>
+        <p class="small">Die Auswahl wird automatisch berechnet, auch beim ersten Öffnen.</p>
+        <button class="btn" id="studyCancel" type="button" hidden>Berechnung abbrechen</button>
+        <p id="studyStatus" class="small" role="status" aria-live="polite"></p>
       </section>
 
       <!-- QUIZ CONFIG -->
       <section id="configQuiz" class="majorBlock">
-        <h2>3) Abfragemodus konfigurieren</h2>
+        <h2>Abfrage konfigurieren</h2>
+        <div id="quizFilters">
 
         <div class="configSubgroup">
           <details class="filterSection" open>
@@ -116,6 +129,7 @@
         </div>
         </div>
 
+        </div>
         <div class="configSubgroup">
         <div class="subhead">Abfrageeinstellungen</div>
         <div class="filterbox">
@@ -146,6 +160,8 @@
         </div>
         </div>
 
+        <label for="quizRunName">Name der Abfrage (optional)</label>
+        <input id="quizRunName" type="text" maxlength="120" placeholder="Automatisch benennen" />
         <div class="row2" style="margin-top:12px;">
           <button class="btn cta" id="startQuizBtn">Abfrage starten</button>
           <button class="btn subtle" id="resetConfigQuizBtn" type="button">Zurücksetzen</button>
@@ -218,6 +234,7 @@
 
       <hr class="sep">
 
+      <div id="localTools" hidden>
       <section id="displayControlsConfig">
       <h2>4) Anzeige</h2>
       <div class="row2">
@@ -243,13 +260,6 @@
       <details>
         <summary><h2 style="display:inline; margin:0;">Lokale Daten</h2></summary>
         <div style="margin-top:10px;">
-          <label>Gespeicherte Abfragen (dieser Datensatz)</label>
-          <select id="savedSessionsSelect" size="4"></select>
-          <div class="row2" style="margin-top:10px;">
-            <button class="btn danger" id="deleteSessionBtn" type="button">Löschen</button>
-            <button class="btn danger" id="clearAllLocalDataBtn" type="button">Alles löschen</button>
-          </div>
-
           <label style="margin-top:12px;">Lokal modifizierte Fragen</label>
           <select id="localOverridesSelect" size="4"></select>
           <div class="row2" style="margin-top:10px;">
@@ -283,6 +293,7 @@
           </details>
         </div>
       </details>
+      </div>
     </section>
 
     <!-- QUIZ/REVIEW SIDEBAR -->
@@ -292,7 +303,7 @@
 
       <div class="row2" style="margin-top:10px;">
         <button class="btn primary" id="endQuizBtn" type="button">Zur Auswertung</button>
-        <button class="btn danger" id="abortQuizBtn" type="button">Abfrage abbrechen</button>
+        <button class="btn danger" id="abortQuizBtn" type="button">Pausieren · Übersicht</button>
       </div>
 
       <div class="row2" id="reviewRepeatActions" style="margin-top:10px;" hidden>
@@ -332,7 +343,7 @@
   </aside>
 
   <main class="card">
-    <div class="small" id="mainInfo">Noch keine Daten geladen.</div>
+    <div id="mainInfo">Noch keine Daten geladen.</div>
     <hr class="sep">
     <div class="qwrap" id="questionList"></div>
   </main>

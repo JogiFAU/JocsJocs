@@ -1636,3 +1636,87 @@ summary { cursor: pointer; color: var(--muted); }
 .lockedHint { position: relative; cursor: pointer; }
 .lockedHint__tip { display: none; position: absolute; top: 100%; left: 0; z-index: 50; width: 220px; padding: 12px; border-radius: 8px; background: var(--panel, #211c30); color: var(--text, #fff); box-shadow: 0 4px 18px #0006; font-size: 13px; font-weight: normal; }
 .lockedHint:hover > .lockedHint__tip, .lockedHint:focus > .lockedHint__tip, .lockedHint.is-open > .lockedHint__tip { display: block; }
+
+#studySettings > summary { cursor: pointer; font-weight: 700; }
+#studySettings label { display: block; margin-top: 12px; }
+#studySettings .row2 { margin-top: 14px; }
+.studySummary { margin-top: 18px; scroll-margin-top: 100px; }
+.studySummary section + section { margin-top: 24px; }
+.studyTable { overflow-x: auto; margin-top: 10px; }
+.studyTable th, .studyTable td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border, #7775); }
+.studyNotice { padding: 12px; border: 1px solid var(--border, #7775); border-radius: 8px; }
+
+/* 4.1: the overview owns query history; configuration is a separate screen. */
+body[data-app-view="setup"] #sidebarConfig > hr { display: none; }
+#backOverviewBtn { margin-top: 12px; width: 100%; }
+#studyPanel label, #configQuiz > label { display: block; margin: 12px 0 6px; }
+.queryArchive { margin-top: 20px; }
+.queryList { max-height: 660px; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; }
+.queryRecord { padding: 16px 0; border-top: 1px solid var(--border, #7775); }
+.queryRecord h3 { margin: 0 0 8px; overflow-wrap: anywhere; }
+.queryRecord p { margin: 8px 0; }
+.queryRecord progress { width: 100%; height: 9px; accent-color: var(--accent, #7aa2ff); }
+.queryActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.queryActions .btn { white-space: normal; }
+.overviewActions { margin-top: 22px; }
+.storageError { color: var(--wrong, #ff8b8b); font-weight: 600; }
+
+/* Shared surfaces, guidance and learning progress for the 4.1 workflow. */
+.top:has(.queryHeaderActions:not([hidden])) { grid-template-columns: minmax(150px,1fr) auto; }
+.queryHeaderActions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.queryHeaderActions .btn { background:var(--btn2); border:1px solid var(--interactive-border-hover); padding:12px 16px; }
+.queryHeaderActions .btn:hover, .queryActions .btn:hover { background:var(--surface-hover); border-color:var(--focus); transform:translateY(-1px); }
+.hero { border-radius:18px; padding:24px; border:1px solid var(--interactive-border-soft); background:linear-gradient(135deg,var(--surface-card),var(--surface-soft)); }
+.hero h1 { font-size:clamp(25px,3vw,34px); line-height:1.15; margin:8px 0 14px; letter-spacing:-.6px; }
+.hero h2 { font-size:21px; margin:8px 0 12px; }
+.sectionEyebrow { font-size:11px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted); }
+.guideLead { color:var(--text); font-size:16px; line-height:1.6; max-width:65ch; }
+.guideTiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:22px 0; }
+.guideTiles > div { padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--surface-soft); }
+.guideTiles h3, .guideStep h3 { font-size:14px; margin:0 0 8px; }
+.guideTiles p, .guideStep p, .guideCompact p { margin:0; font-size:13px; line-height:1.65; color:var(--muted); }
+.guideDetails { border-top:1px solid var(--border); padding-top:14px; font-size:13px; line-height:1.65; }
+.guideDetails summary, .examProgressDetails summary { cursor:pointer; font-weight:700; }
+.guideSteps { display:grid; gap:18px; padding-top:24px; border-top:1px solid var(--border); margin-top:20px; }
+.guideStep { display:flex; align-items:flex-start; gap:14px; }
+.guideStep__number { flex:0 0 30px; width:30px; height:30px; display:grid; place-items:center; border-radius:10px; font-size:13px; font-weight:800; background:var(--selected-bg); color:var(--text); border:1px solid var(--interactive-border-soft); }
+.guideCompact { padding-top:12px; }
+.guideCompact strong { display:block; margin-bottom:8px; font-size:18px; }
+.queryArchive { margin-top:18px; }
+.queryRecord { margin:12px 0; border:1px solid var(--border); padding:18px; border-radius:14px; background:var(--surface-soft); }
+.queryRecord h3 { font-size:16px; }
+.queryActions .btn { background:var(--btn2); border:1px solid var(--interactive-border-hover); padding:10px 14px; transition:background .15s,border-color .15s,transform .15s; }
+.queryActions .btn.danger { border-color:var(--bad-soft-border); }
+.queryActions .btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+.learningBar { display:flex; width:100%; height:8px; overflow:hidden; background:var(--surface-track); border-radius:999px; margin:12px 0; }
+.learningBar span { height:100%; flex-shrink:0; }
+.learningBar__correct { background:linear-gradient(90deg,var(--theme-progress-correct-1),var(--theme-progress-correct-2)); }
+.learningBar__wrong { background:linear-gradient(90deg,var(--theme-progress-wrong-1),var(--theme-progress-wrong-2)); }
+.learningBar__neutral { background:#5799f5; }
+.subjectProgress { background:var(--surface-soft); padding:14px; border:1px solid var(--border); border-radius:12px; }
+.subjectProgress strong { font-size:24px; }
+.subjectProgress strong span { font-size:13px; color:var(--muted); font-weight:500; }
+.subjectProgress p { margin:0; }
+.learningProgressDetails > summary { cursor:pointer; font-size:15px; font-weight:800; }
+.learningProgressDetails > summary span { color:var(--muted); font-size:12px; font-weight:500; float:right; }
+.learningProgressDetails[open] > summary { margin-bottom:14px; }
+.examProgressDetails { border-top:1px solid var(--border); padding-top:14px; margin-top:16px; }
+.examProgressDetails summary { font-size:13px; }
+.examProgressDetails summary span { color:var(--muted); margin-left:6px; }
+.examProgressList { max-height:330px; overflow-y:auto; margin-top:10px; padding-right:5px; }
+.examProgressList article { padding:10px 0; border-bottom:1px solid var(--border); }
+.examProgressName { font-size:12px; font-weight:700; overflow-wrap:anywhere; }
+.examProgressList p { margin:0; font-size:11px; }
+.examProgressList .learningBar { margin:7px 0; height:5px; }
+@media (max-width:1100px) { .guideTiles { grid-template-columns:1fr; } }
+@media (max-width:600px) {
+  .top:has(.queryHeaderActions:not([hidden])) { grid-template-columns:1fr; }
+  .queryHeaderActions { justify-content:stretch; gap:8px; }
+  .queryHeaderActions .btn { flex:1 1 140px; padding:10px; font-size:12px; white-space:normal; }
+  .hero { padding:18px; }
+  .queryRecord { padding:14px; }
+}
+@media (max-width: 600px) {
+  .queryActions .btn { flex: 1 1 140px; }
+  .queryList { max-height: 600px; }
+}

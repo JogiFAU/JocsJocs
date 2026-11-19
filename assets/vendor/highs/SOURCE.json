@@ -1,0 +1,9 @@
+{
+  "version": "1.15.4",
+  "url": "https://registry.npmjs.org/highs/-/highs-1.15.4.tgz",
+  "integrity": "sha512-vsC03XHDqWAVrEFUt22h8e4CDDMb+LAFa0bycjPUq2kadRigK5pNLVIlwspKvMxxVtrr4NAucZHP/CAgigxiDQ==",
+  "files": {
+    "highs.mjs": "f2bdfd071d19c3745756a087026589e9240f329e38315a86f626823ae78a4036",
+    "highs.wasm": "f13134e3e335e7bad984ff12abeb41e86e0eeeb1752ae8a85322cc6839df8acd"
+  }
+}

@@ -1,0 +1,13 @@
+JocsJocs 4.1 – Testpaket
+
+ZIP entpacken. Im Ordner Testanzeige START_TEST_VIEWER.bat starten. Die App öffnet einen lokalen HTTP-Server und den Browser.
+
+1. Im Setup links das Fach auswählen und „Fach laden“ anklicken.
+2. Die Übersicht zeigt gespeicherte Abfragen. Neue Abfragen werden über die festen Header-Buttons „Neue Abfrage konfigurieren“ oder „High-Impact-Abfrage“ angelegt. Links findest du den Lernstand des Fachs und der einzelnen Klausuren.
+3. High Impact berechnet jeweils ein Set. Wählbar sind Zielquote, erwartete Fragenzahl und Alle / 5 neueste Klausuren / Aus Abfragefilter. Die Berechnung beginnt automatisch beim Öffnen und wird bei Parameter- und Filteränderungen aktualisiert.
+4. Beim Start wird eine benannte Abfrage lokal gespeichert. Ohne eigenen Namen wird ein eindeutiger Name erzeugt. „Pausieren · Übersicht“ erhält den Fortschritt. In der Übersicht kann fortgesetzt, wiederholt oder gelöscht werden.
+5. Für Suchmodus links „Fragen durchsuchen“ wählen. Die Suche ist unabhängig von einer gespeicherten Abfrage.
+
+Alle Abfragen werden im Browser unter dem jeweiligen Fach gespeichert. Backup-Import/-Export ist unter „Lokale Daten“ verfügbar. Der Teststarter verwendet dauerhaft http://127.0.0.1:8041/. Speicherstände sind an Browser und Webadresse gebunden. Ein fester Port erhält die Speicherstände bei Neustarts. Beim Wechsel des Browsers oder der Webadresse bitte Backup exportieren und nach dem Wechsel importieren. Innerhalb derselben Webadresse bleibt die Fachkennung auch bei neuen Datenexporten stabil; passende ältere Abfragen werden übernommen.
+
+Die enthaltenen Fragebewertungen und Altfragengruppen stammen aus den gewählten Analyzer-Läufen. Technische Fehler und bekannte unsichere Gruppierungen werden durch diese UI-Version nicht fachlich korrigiert.

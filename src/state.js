@@ -1,11 +1,14 @@
 export const state = {
   questionsAll: [],
+  studyInput: null,
+  studyResult: null,
 
   // Theme
   themeId: "spezi",
   themeTokens: null,
 
   // Dataset meta
+  loadingSubject: false,
   activeDataset: null, // { id, label, notebookUrl, ... }
   manifest: null,
 
@@ -15,11 +18,15 @@ export const state = {
   zipObjectUrls: new Map(),
 
   // View / workflow
-  view: "config", // "config" | "quiz" | "review" | "search"
+  view: "setup", // setup -> overview -> config/search -> quiz -> review
+  configKind: "normal", // normal | highImpact
+  configurationSeed: Date.now(),
   configTab: "quiz", // "quiz" | "search"
 
   // Quiz session (fixed subset once started)
   currentSessionId: null,
+  sessionName: null,
+  storageError: null,
   quizConfig: null,
   quizFinishedAt: null,
   questionOrder: [], // array of qids (fixed)
@@ -58,6 +65,7 @@ export function resetAnswers() {
 
 export function resetQuizSession() {
   state.currentSessionId = null;
+  state.sessionName = null;
   state.quizConfig = null;
   state.quizFinishedAt = null;
   state.questionOrder = [];

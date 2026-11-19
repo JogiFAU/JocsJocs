@@ -10,12 +10,19 @@ function overridesKey(datasetId) {
   return `${PREFIX}overrides:${datasetId}`;
 }
 
+function deletedKey(datasetId) { return `${PREFIX}deletedSessions:${datasetId}`; }
+function deletedIds(datasetId) {
+  const parsed=safeJsonParse(localStorage.getItem(deletedKey(datasetId)) || '[]',[]);
+  return new Set(Array.isArray(parsed)?parsed:[]);
+}
+
 function safeJsonParse(s, fallback) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
 export function listSessions(datasetId) {
-  const arr = safeJsonParse(localStorage.getItem(key(datasetId)) || "[]", []);
+  const parsed = safeJsonParse(localStorage.getItem(key(datasetId)) || "[]", []);
+  const arr = Array.isArray(parsed) ? parsed.filter(s=>s && typeof s==='object' && s.id) : [];
   arr.sort((a,b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
   return arr;
 }
@@ -36,21 +43,55 @@ export function loadSession(datasetId, sessionId) {
   return arr.find(x => x.id === sessionId) || null;
 }
 
+export function subjectStorageId(manifestEntry,subject) {
+  if (manifestEntry.storageKey) return String(manifestEntry.storageKey);
+  if (!subject) return manifestEntry.id;
+  return 'subject:'+String(subject).normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('de-DE');
+}
+
+export function migrateSubjectSessions(targetId,sourceId,questions) {
+  const current=listSessions(targetId),byId=new Map(current.map(s=>[s.id,s]));
+  const deleted=deletedIds(targetId);
+  const ids=new Set(questions.map(q=>q.id));
+  const sources=[];
+  for (let i=0;i<localStorage.length;i++) {
+    const candidate=localStorage.key(i);
+    if (candidate?.startsWith(PREFIX+'sessions:') && candidate!==key(targetId)) sources.push(candidate.slice((PREFIX+'sessions:').length));
+  }
+  let changed=false;
+  for (const oldId of sources) for (const record of listSessions(oldId)) {
+    if (deleted.has(record.id)) continue;
+    const order=Array.isArray(record.questionOrder)?record.questionOrder:[];
+    if (oldId!==sourceId && (!order.length || !order.every(id=>ids.has(id)))) continue;
+    const previous=byId.get(record.id);
+    if (!previous || (record.updatedAt || record.createdAt || 0)>(previous.updatedAt || previous.createdAt || 0)) {
+      byId.set(record.id,{...record,datasetId:targetId,sourceDatasetId:record.sourceDatasetId || oldId});changed=true;
+    }
+  }
+  if (changed) localStorage.setItem(key(targetId),JSON.stringify([...byId.values()]));
+  if (sourceId!==targetId) {
+    const oldOverrides=getLocalQuestionOverrides(sourceId),overrides=getLocalQuestionOverrides(targetId);
+    if (Object.keys(oldOverrides).length) localStorage.setItem(overridesKey(targetId),JSON.stringify({...oldOverrides,...overrides}));
+  }
+}
+
 export function deleteSession(datasetId, sessionId) {
   const arr = listSessions(datasetId).filter(x => x.id !== sessionId);
+  const deleted=deletedIds(datasetId);deleted.add(sessionId);
+  localStorage.setItem(deletedKey(datasetId),JSON.stringify([...deleted]));
   localStorage.setItem(key(datasetId), JSON.stringify(arr));
 }
 
 export function getLatestFinishedQuizSession(datasetId) {
   const arr = listSessions(datasetId);
-  const quiz = arr.filter(s => s.kind === "quiz" && s.finishedAt);
+  const quiz = arr.filter(s => (!s.kind || s.kind === "quiz") && s.finishedAt);
   quiz.sort((a,b) => (b.finishedAt || 0) - (a.finishedAt || 0));
   return quiz[0] || null;
 }
 
 export function getLatestAnsweredResultsByQuestion(datasetId) {
   const arr = listSessions(datasetId)
-    .filter(s => s.kind === "quiz" && s.finishedAt)
+    .filter(s => (!s.kind || s.kind === "quiz") && s.finishedAt)
     .sort((a,b) => (b.finishedAt || 0) - (a.finishedAt || 0));
 
   const latestAnswered = new Map(); // qid -> boolean correct
@@ -81,7 +122,7 @@ export function exportBackupAllDatasets() {
   const out = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (!k || !k.startsWith(PREFIX + "sessions:")) continue;
+    if (!k || !(k.startsWith(PREFIX + "sessions:") || k.startsWith(PREFIX + "deletedSessions:"))) continue;
     out[k] = safeJsonParse(localStorage.getItem(k), []);
   }
   return out;
@@ -91,7 +132,7 @@ export function importBackupAllDatasets(backupObj) {
   if (!backupObj || typeof backupObj !== "object") throw new Error("Ungültiges Backup-Format.");
   let written = 0;
   for (const [k, v] of Object.entries(backupObj)) {
-    if (!k.startsWith(PREFIX + "sessions:")) continue;
+    if (!(k.startsWith(PREFIX + "sessions:") || k.startsWith(PREFIX + "deletedSessions:"))) continue;
     localStorage.setItem(k, JSON.stringify(Array.isArray(v) ? v : []));
     written++;
   }

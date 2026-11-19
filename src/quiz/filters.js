@@ -29,8 +29,8 @@ export function filterByImageMode(qs, mode) {
   return qs;
 }
 
-export function applyRandomAndShuffle(qs, { randomN = 0, shuffleQuestions = false } = {}) {
-  const rng = mulberry32(Date.now());
+export function applyRandomAndShuffle(qs, { randomN = 0, shuffleQuestions = false, seed = Date.now() } = {}) {
+  const rng = mulberry32(seed);
 
   let out = qs.slice();
   if (randomN > 0 && randomN < out.length) {

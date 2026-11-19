@@ -1,7 +1,13 @@
-Testpaket für die bestehende Anzeige-App
+JocsJocs 4.1 – Testpaket
 
-ZIP in einen neuen Ordner entpacken. Im Unterordner Testanzeige START_TEST_VIEWER.bat starten. Alternativ: python START_TEST_VIEWER.py. Der lokale Testserver wählt einen freien Port und öffnet den Browser. Beim ersten Laden den vorkonfigurierten Datensatz auswählen und laden. Nicht index.html direkt über file:// öffnen.
+ZIP entpacken. Im Ordner Testanzeige START_TEST_VIEWER.bat starten. Die App öffnet einen lokalen HTTP-Server und den Browser.
 
-Die HTML-/JS-/CSS-Dateien der Anzeige-App sind unverändert kopiert. Nur datasets/manifest.json und die Exportdateien wurden erzeugt. Annotationen und Altfragengruppen befinden sich zusammen in datasets/export/data.annotated.json. EXPORT_INFO.json enthält Prüfsummen, Anzahlen und die Datenpfade. Technische Laufberichte sind keine Datensätze für die Anzeige-App.
+1. Im Setup links das Fach auswählen und „Fach laden“ anklicken.
+2. Die Übersicht zeigt gespeicherte Abfragen. Neue Abfragen werden über die festen Header-Buttons „Neue Abfrage konfigurieren“ oder „High-Impact-Abfrage“ angelegt. Links findest du den Lernstand des Fachs und der einzelnen Klausuren.
+3. High Impact berechnet jeweils ein Set. Wählbar sind Zielquote, erwartete Fragenzahl und Alle / 5 neueste Klausuren / Aus Abfragefilter. Die Berechnung beginnt automatisch beim Öffnen und wird bei Parameter- und Filteränderungen aktualisiert.
+4. Beim Start wird eine benannte Abfrage lokal gespeichert. Ohne eigenen Namen wird ein eindeutiger Name erzeugt. „Pausieren · Übersicht“ erhält den Fortschritt. In der Übersicht kann fortgesetzt, wiederholt oder gelöscht werden.
+5. Für Suchmodus links „Fragen durchsuchen“ wählen. Die Suche ist unabhängig von einer gespeicherten Abfrage.
 
-Vorhandene technische Fragenfehler bleiben erhalten. Bei deaktivierter Modellprüfung erscheinen nur bestätigte exakte Altfragengruppen, nicht alle Retrievalkandidaten. Fragebilder nutzen wie die Original-App deren JSZip-CDN-Einbindung; die Anzeige-App selbst wurde hierfür nicht angepasst.
+Alle Abfragen werden im Browser unter dem jeweiligen Fach gespeichert. Backup-Import/-Export ist unter „Lokale Daten“ verfügbar. Der Teststarter verwendet dauerhaft http://127.0.0.1:8041/. Speicherstände sind an Browser und Webadresse gebunden. Ein fester Port erhält die Speicherstände bei Neustarts. Beim Wechsel des Browsers oder der Webadresse bitte Backup exportieren und nach dem Wechsel importieren. Innerhalb derselben Webadresse bleibt die Fachkennung auch bei neuen Datenexporten stabil; passende ältere Abfragen werden übernommen.
+
+Die enthaltenen Fragebewertungen und Altfragengruppen stammen aus den gewählten Analyzer-Läufen. Technische Fehler und bekannte unsichere Gruppierungen werden durch diese UI-Version nicht fachlich korrigiert.

@@ -45,7 +45,7 @@ export function clearZipObjectUrls() {
 
 function requireJSZip() {
   if (typeof window.JSZip === "undefined") {
-    throw new Error("JSZip ist nicht verfügbar (CDN blockiert?). Bilder-ZIP kann nicht geladen werden.");
+    throw new Error("Die lokale Bildbibliothek fehlt. Bitte die vollständige App mit assets/vendor/jszip kopieren.");
   }
   return window.JSZip;
 }

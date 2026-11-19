@@ -1,12 +1,14 @@
+import {wireStudyUi,syncStudyConfiguration,readyStudyResult,resetStudyUi} from "../study/ui.js";
+import {sessionDisplayName,sessionProgress,sessionAvailability} from "../quiz/sessionRecord.js";
 import { $, toast, confirmDialog } from "../utils.js";
 import { state, resetQuizSession, resetSearch } from "../state.js";
 import { loadJsonUrls } from "../data/loaders.js";
 import { loadZipUrl } from "../data/zipImages.js";
 import { getSelectedDataset } from "../data/manifest.js";
 import { filterByExams, filterByTopics, filterByImageMode, applyRandomAndShuffle, searchQuestions } from "../quiz/filters.js";
-import { startQuizSession, startSearchView, finishQuizSession, abortQuizSession, exitToConfig } from "../quiz/session.js";
+import { startQuizSession, startSearchView, finishQuizSession, abortQuizSession, hydrateQuizSessionFromStorage } from "../quiz/session.js";
 import { renderAll, updateFilterLists } from "./render.js";
-import { listSessions, deleteSession, exportBackupAllDatasets, importBackupAllDatasets, getLatestAnsweredResultsByQuestion, clearAllSessionData, getLocalQuestionOverrides, deleteLocalQuestionOverride, clearLocalQuestionOverrides } from "../data/storage.js";
+import { subjectStorageId, migrateSubjectSessions, listSessions, loadSession, deleteSession, exportBackupAllDatasets, importBackupAllDatasets, getLatestAnsweredResultsByQuestion, getLocalQuestionOverrides, deleteLocalQuestionOverride, clearLocalQuestionOverrides } from "../data/storage.js";
 import { applyTheme } from "../theme.js";
 import { wireSourceViewer } from './sourceReferences.js';
 
@@ -34,6 +36,13 @@ function selectedTopicsFromList(containerId) {
   return { superTopics, subTopics };
 }
 
+function studyMetadata() {
+  const result=readyStudyResult();
+  if (!result) return null;
+  const {selectionKey,...metadata}=result;
+  return metadata;
+}
+
 function buildQuizConfigFromUi() {
   const rawN = ($("randomN")?.value || "").trim();
   const n = rawN ? Number(rawN) : 0;
@@ -41,6 +50,10 @@ function buildQuizConfigFromUi() {
   const topics = selectedTopicsFromList("topicListQuiz");
 
   return {
+    kind: state.configKind,
+    runName: $("quizRunName").value.trim(),
+    sampleSeed: state.configurationSeed,
+    highImpact: state.configKind==='highImpact' ? studyMetadata() : null,
     exams: selectedExamsFromList("examListQuiz"),
     superTopics: topics.superTopics,
     subTopics: topics.subTopics,
@@ -107,7 +120,7 @@ function buildSearchConfigFromUi() {
   };
 }
 
-function computeQuizSubset(config) {
+function computeBaseQuizSubset(config) {
   let qs = state.questionsAll.slice();
   qs = filterByExams(qs, config.exams);
   qs = filterByTopics(qs, { superTopics: config.superTopics, subTopics: config.subTopics });
@@ -124,9 +137,20 @@ function computeQuizSubset(config) {
 
   qs = applyRandomAndShuffle(qs, {
     randomN: config.randomN,
+    seed: config.sampleSeed,
     shuffleQuestions: config.shuffleQuestions
   });
   return qs;
+}
+
+function computeQuizSubset(config,base=null) {
+  if (config.kind!=='highImpact') return base || computeBaseQuizSubset(config);
+  const result=readyStudyResult();
+  if (!result) return [];
+  const questions=new Map(state.questionsAll.map(q=>[q.id,q]));
+  const refs=result.set.referenceIds.map(id=>questions.get(id));
+  if (refs.some(q=>!q)) return [];
+  return applyRandomAndShuffle(refs,{shuffleQuestions:config.shuffleQuestions,seed:config.sampleSeed});
 }
 
 function computeSearchSubset(config) {
@@ -158,45 +182,54 @@ function hideReviewRepeatActions() {
   if (container) container.hidden = true;
 }
 
-function restartQuizFromReview({ wrongOnly = false } = {}) {
-  if (state.view !== "review") return;
-
-  const allQuestions = getQuestionsByOrder(state.questionOrder || []);
-  const subset = wrongOnly
-    ? allQuestions.filter(q => state.results.get(q.id) === false)
-    : allQuestions;
-
-  if (!subset.length) {
-    alert(wrongOnly
-      ? "Keine falsch beantworteten Fragen vorhanden."
-      : "Die vorherige Abfrage enthält keine Fragen.");
-    return;
-  }
-
-  const nextConfig = {
-    ...(state.quizConfig || {}),
-    wrongOnly: wrongOnly ? true : !!state.quizConfig?.wrongOnly,
-  };
-
-  startQuizSession({ subset, config: nextConfig });
+function startRepeatedSession(session,wrongOnly=false) {
+  const availability=sessionAvailability(session,state.questionsAll);
+  if (availability.missing || availability.changed) throw Error('Für diese Abfrage muss der passende Fachstand geladen sein.');
+  const progress=sessionProgress(session);
+  const ids=wrongOnly?progress.wrongIds:session.questionOrder;
+  const questions=new Map(state.questionsAll.map(q=>[q.id,q]));
+  const subset=ids.map(id=>questions.get(id));
+  if (!subset.length) { toast('Keine passenden Fragen für die Wiederholung.');return false; }
+  const config={...(session.quizConfig || {}),runName:'',repeatOf:session.id,
+    repeatMode:wrongOnly?'wrong':'all',parentName:sessionDisplayName(session)};
+  startQuizSession({subset,config});
+  return true;
 }
 
-function refreshSavedSessionsUi() {
-  const datasetId = state.activeDataset?.id;
-  const sel = $("savedSessionsSelect");
-  sel.innerHTML = "";
-  if (!datasetId) return;
+function restartQuizFromReview({wrongOnly=false}={}) {
+  if (state.view!=='review') return;
+  const session=loadSession(state.activeDataset.id,state.currentSessionId);
+  if (session) startRepeatedSession(session,wrongOnly);
+}
 
-  const sessions = listSessions(datasetId);
-  for (const s of sessions) {
-    const opt = document.createElement("option");
-    opt.value = s.id;
-    const dt = new Date(s.updatedAt || s.createdAt || Date.now());
-    const kind = s.kind || "quiz";
-    const extra = (s.finishedAt ? "✓ beendet" : "… offen");
-    opt.textContent = `${dt.toLocaleString()} · ${kind} · ${s.quizConfig?.quizMode || ""} · ${s.questionOrder?.length || 0} Fragen · ${extra}`;
-    sel.appendChild(opt);
-  }
+async function showOverview() {
+  if (state.view==='quiz' && !abortQuizSession()) { await renderAll();return; }
+  resetStudyUi();resetSearch();resetQuizSession();
+  state.view='overview';state.configTab='quiz';state.configKind='normal';
+  updateFilterLists();resetAllConfigs();
+  await renderAll();
+  window.scrollTo({top:0,behavior:'auto'});
+}
+
+async function configureQuery(kind) {
+  if (!state.activeDataset) return;
+  resetStudyUi();resetSearch();resetQuizSession();
+  state.view='config';state.configTab='quiz';state.configKind=kind;
+  state.configurationSeed=(Date.now() ^ Math.floor(Math.random()*0xffffffff)) >>> 0;
+  $('studyScope').value='allExams';
+  $('studyTarget').value='60';
+  $('studyNominal').value='30';
+  updateFilterLists();resetAllConfigs();
+  await renderAll();
+  window.scrollTo({top:0,behavior:'auto'});
+}
+
+async function configureSearch() {
+  if (!state.activeDataset) return;
+  resetStudyUi();resetSearch();resetQuizSession();
+  state.view='config';state.configTab='search';state.configKind='normal';
+  updateFilterLists();resetAllConfigs();
+  await renderAll();
 }
 
 function refreshLocalOverridesUi() {
@@ -223,20 +256,27 @@ function refreshLocalOverridesUi() {
 }
 
 async function loadDatasetFromManifest(autoToast = false) {
+  if (state.loadingSubject) return;
   const d = getSelectedDataset();
   if (!d) {
-    alert("Kein Datensatz gefunden (manifest.json).");
+    alert("Kein Fach gefunden (manifest.json).");
     return;
   }
+  state.loadingSubject=true;
+  $("loadDatasetBtn").disabled=true;
+  $("loadDatasetBtn").textContent="Fach wird geladen …";
+  $("datasetSelect").disabled=true;
   try {
     const jsonUrls = Array.isArray(d.json) ? d.json : [d.json];
     await loadJsonUrls(jsonUrls);
     await loadZipUrl(d.zip || null);
 
-    const overridesObj = getLocalQuestionOverrides(d.id);
+    const storageId=subjectStorageId(d,state.loadedSubject);
+    migrateSubjectSessions(storageId,d.id,state.questionsAll);
+    const overridesObj = getLocalQuestionOverrides(storageId);
     state.localQuestionOverrides = new Map(Object.entries(overridesObj || {}));
 
-    state.activeDataset = { ...d };
+    state.activeDataset = { ...d, id:storageId, sourceId:d.id, label:state.loadedSubject || d.label };
     const legacyEditingAvailable=state.questionsAll.some(q=>Boolean(q.reconstructedQuestion));
     for (const id of ["aiModeEnabled","onlyAiModifiedSearch"]) {
       const field=$(id);
@@ -246,12 +286,14 @@ async function loadDatasetFromManifest(autoToast = false) {
     }
     const datasetMetaHint = $("datasetMetaHint");
     if (datasetMetaHint) {
-      datasetMetaHint.textContent = `Aktuell gewähltes Fach: ${d.label || d.id}`;
+      datasetMetaHint.textContent = `Aktuell gewähltes Fach: ${state.activeDataset.label || storageId}`;
     }
 
     resetQuizSession();
     resetSearch();
-    state.view = "config";
+    state.view = "overview";
+    state.configKind = "normal";
+    resetStudyUi();
     state.configTab = "quiz";
 
     updateFilterLists();
@@ -261,14 +303,18 @@ async function loadDatasetFromManifest(autoToast = false) {
     $("pageNumber2").value = "1";
     $("pageSize2").value = $("pageSize").value;
 
-    refreshSavedSessionsUi();
     refreshLocalOverridesUi();
     updatePreviewTexts();
 
     await renderAll();
-    if (autoToast) toast("Datensatz geladen.");
+    if (autoToast) toast("Fach geladen.");
   } catch (e) {
-    alert("Fehler beim Laden des Datensatzes: " + e);
+    alert("Fehler beim Laden des Fachs: " + e);
+  } finally {
+    state.loadingSubject=false;
+    $("loadDatasetBtn").textContent="Fach laden";
+    $("datasetSelect").disabled=false;
+    await renderAll();
   }
 }
 
@@ -278,7 +324,9 @@ function updatePreviewTexts() {
   refreshWrongOnlyControl();
 
   const quizCfg = buildQuizConfigFromUi();
-  const quizSubset = computeQuizSubset(quizCfg);
+  const baseSubset = computeBaseQuizSubset(quizCfg);
+  syncStudyConfiguration(baseSubset);
+  const quizSubset = computeQuizSubset(quizCfg,baseSubset);
   const searchCfg = buildSearchConfigFromUi();
   const searchSubset = computeSearchSubset(searchCfg);
   state.preview = { quizCount: quizSubset.length, searchCount: searchSubset.length };
@@ -286,7 +334,7 @@ function updatePreviewTexts() {
   const activeCount = state.configTab === "search" ? searchSubset.length : quizSubset.length;
   const needPaging = activeCount > 1000;
   const dc = $("displayControlsConfig");
-  if (dc) dc.hidden = (state.view === "config") ? true : !needPaging;
+  if (dc) dc.hidden = state.view!=="search" || !needPaging;
 }
 
 
@@ -310,6 +358,7 @@ function resetQuizConfig() {
   const kia = $("keywordInAnswers");
   if (kia) kia.checked = false;
 
+  $("quizRunName").value = "";
   $("shuffleQuestions").checked = false;
   $("shuffleAnswers").checked = false;
   $("quizMode").value = "practice";
@@ -363,6 +412,7 @@ function scrollToFirstRenderedQuestion() {
 
 
 export function wireUiEvents() {
+  wireStudyUi(async()=>{updatePreviewTexts();await renderAll();});
   wireSourceViewer();
   document.addEventListener("click", (ev) => {
     const toggleRoot = ev.target.closest("[data-tip-toggle]");
@@ -402,21 +452,31 @@ export function wireUiEvents() {
     await renderAll();
   });
 
-  // Tabs
-  $("tabQuiz").addEventListener("click", async () => {
-    if (state.view === "search") {
-      state.view = "config";
-      resetSearch();
-      resetAllConfigs();
-      updateFilterLists();
-      refreshSavedSessionsUi();
-    }
-    state.configTab = "quiz";
-    await renderAll();
-  });
-  $("tabSearch").addEventListener("click", async () => {
-    state.configTab = "search";
-    await renderAll();
+  // Workflow navigation never discards a started query.
+  $('tabQuiz').addEventListener('click',showOverview);
+  $('tabSearch').addEventListener('click',configureSearch);
+  $('backOverviewBtn').addEventListener('click',showOverview);
+  document.addEventListener('click',async(event)=>{
+    const button=event.target.closest('button');
+    if (!button || button.disabled) return;
+    try {
+      if (button.id==='newQueryBtn') { await configureQuery('normal');return; }
+      if (button.id==='newImpactQueryBtn') { await configureQuery('highImpact');return; }
+      const action=button.dataset.queryAction;
+      if (!action) return;
+      const session=loadSession(state.activeDataset.id,button.dataset.queryId);
+      if (!session) throw Error('Die gespeicherte Abfrage wurde nicht gefunden.');
+      if (action==='delete') {
+        const confirmed=await confirmDialog({title:'Abfrage löschen?',message:sessionDisplayName(session),confirmText:'Löschen'});
+        if (!confirmed) return;
+        deleteSession(state.activeDataset.id,session.id);
+        updateFilterLists();updatePreviewTexts();await renderAll();return;
+      }
+      resetStudyUi();
+      if (action==='open') hydrateQuizSessionFromStorage(session);
+      else startRepeatedSession(session,action==='wrong');
+      initNavObserver();await renderAll();window.scrollTo({top:0,behavior:'auto'});
+    } catch(error) { alert(error.message); }
   });
 
   $("loadDatasetBtn").addEventListener("click", async () => {
@@ -440,14 +500,13 @@ export function wireUiEvents() {
       state.view = "config";
       state.configTab = "search";
       updateFilterLists();
-      refreshSavedSessionsUi();
       refreshLocalOverridesUi();
       await renderAll();
     }
   });
 
   [
-    "imageFilterQuiz","wrongOnlyQuiz","randomN","keywordFilter","keywordInAnswers","shuffleQuestions","shuffleAnswers","quizMode","showTopicsInBanner","aiModeEnabled",
+    "quizRunName","imageFilterQuiz","wrongOnlyQuiz","randomN","keywordFilter","keywordInAnswers","shuffleQuestions","shuffleAnswers","quizMode","showTopicsInBanner","aiModeEnabled",
     "imageFilterSearch","searchText","searchInAnswers","wrongOnlySearch","searchShowSolutions","onlyAiModifiedSearch"
   ].forEach(id => {
     const el = $(id);
@@ -463,16 +522,18 @@ export function wireUiEvents() {
 
   $("startQuizBtn").addEventListener("click", async () => {
     if (!state.activeDataset) {
-      alert("Bitte zuerst einen Datensatz laden.");
+      alert("Bitte zuerst ein Fach laden.");
       return;
     }
     const cfg = buildQuizConfigFromUi();
     const subset = computeQuizSubset(cfg);
+    if (cfg.kind==='highImpact' && !cfg.highImpact) { alert("Bitte zuerst ein gültiges Lernset berechnen.");return; }
     if (!subset.length) {
       alert("Keine Fragen im Subset. Filter anpassen.");
       return;
     }
-    startQuizSession({ subset, config: cfg });
+    try { startQuizSession({ subset, config: cfg }); }
+    catch(error) { alert(error.message);return; }
     initNavObserver();
     $("pageNumber").value = "1";
     $("pageNumber2").value = "1";
@@ -495,33 +556,15 @@ export function wireUiEvents() {
       }
     }
 
-    finishQuizSession();
+    if (!finishQuizSession()) { await renderAll();return; }
     initNavObserver();
-    refreshSavedSessionsUi();
     refreshLocalOverridesUi();
     await renderAll();
     window.scrollTo({ top: 0, behavior: "auto" });
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   });
 
-  $("abortQuizBtn").addEventListener("click", async () => {
-    if (state.view === "quiz") {
-      const ok = await confirmDialog({
-        title: "Abfrage abbrechen?",
-        message: "Abfrage wirklich abbrechen und zur Konfiguration zurückkehren?",
-        confirmText: "Abfrage abbrechen",
-        cancelText: "Zurück"
-      });
-      if (!ok) return;
-      abortQuizSession();
-    } else if (state.view === "review") {
-      exitToConfig();
-    }
-    resetAllConfigs();
-    updateFilterLists();
-    refreshSavedSessionsUi();
-    await renderAll();
-  });
+  $('abortQuizBtn').addEventListener('click',showOverview);
 
   $("repeatQuizBtn")?.addEventListener("click", async () => {
     hideReviewRepeatActions();
@@ -553,7 +596,7 @@ export function wireUiEvents() {
   $("startSearchBtn").addEventListener("click", async () => {
     state.configTab = "search";
     if (!state.activeDataset) {
-      alert("Bitte zuerst einen Datensatz laden.");
+      alert("Bitte zuerst ein Fach laden.");
       return;
     }
     const cfg = buildSearchConfigFromUi();
@@ -604,18 +647,6 @@ export function wireUiEvents() {
   });
 
   // Storage
-  $("deleteSessionBtn").addEventListener("click", () => {
-    const datasetId = state.activeDataset?.id;
-    if (!datasetId) return;
-    const sessionId = $("savedSessionsSelect").value;
-    if (!sessionId) return;
-    deleteSession(datasetId, sessionId);
-    refreshSavedSessionsUi();
-    updateFilterLists();
-    updatePreviewTexts();
-    toast("Session gelöscht.");
-  });
-
   $("deleteLocalOverrideBtn")?.addEventListener("click", async () => {
     const datasetId = state.activeDataset?.id;
     if (!datasetId) return;
@@ -639,21 +670,6 @@ export function wireUiEvents() {
   });
 
 
-  $("clearAllLocalDataBtn").addEventListener("click", async () => {
-    const ok = await confirmDialog({
-      title: "Alle lokalen Daten löschen?",
-      message: "Dadurch werden alle gespeicherten Abfragen für alle Datensätze aus diesem Browser entfernt.",
-      confirmText: "Alles löschen"
-    });
-    if (!ok) return;
-
-    const removed = clearAllSessionData();
-    refreshSavedSessionsUi();
-    updateFilterLists();
-    updatePreviewTexts();
-    toast(removed > 0 ? `Lokale Daten gelöscht (${removed} Speicherstände).` : "Keine lokalen Daten vorhanden.");
-  });
-
   $("downloadBackupBtn").addEventListener("click", () => {
     const backup = exportBackupAllDatasets();
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -674,9 +690,10 @@ export function wireUiEvents() {
       const txt = await file.text();
       const obj = JSON.parse(txt);
       importBackupAllDatasets(obj);
-      refreshSavedSessionsUi();
+      if (state.activeDataset) migrateSubjectSessions(state.activeDataset.id,state.activeDataset.sourceId || state.activeDataset.id,state.questionsAll);
       updateFilterLists();
       updatePreviewTexts();
+      await renderAll();
     } catch (err) {
       alert("Backup konnte nicht importiert werden: " + err);
     } finally {

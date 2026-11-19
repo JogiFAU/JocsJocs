@@ -1,13 +1,22 @@
 {
   "datasets": [
     {
-      "id": "analyzer-0750060afa6242069c9f8b82a83addfd",
+      "id": "analyzer-4d27034096c4427b8a0001358f654aca",
       "label": "M1 Radiologie",
       "json": [
         "datasets/Radiologie/data.annotated.json"
       ],
       "enabled": true,
       "zip": "datasets/Radiologie/question-images.zip"
+    },
+    {
+      "id": "analyzer-75ea9d45defa40f38d577674b8f8ad0d",
+      "label": "M1 Pathologie",
+      "json": [
+        "datasets/Pathologie/data.annotated.json"
+      ],
+      "enabled": true,
+      "zip": "datasets/Pathologie/question-images.zip"
     }
   ]
 }

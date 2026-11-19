@@ -1,7 +1,11 @@
+import {configGuideHtml,sessionGuideHtml} from './guides.js';
+import {learningProgressHtml} from './learningProgress.js';
+import {explanationHtml,overviewHtml} from "./overview.js";
+import {renderStudyUi,studySummaryHtml,studyConfigurationStats} from "../study/ui.js";
 import { state } from "../state.js";
 import { $, letter, toast, examDisplayName } from "../utils.js";
 import { isMultiCorrect, getCorrectIndices, evaluate } from "../quiz/evaluate.js";
-import { submitAnswer, unsubmitAnswer } from "../quiz/session.js";
+import { submitAnswer, unsubmitAnswer, persistCurrentQuizSession } from "../quiz/session.js";
 import { getImageUrl } from "../data/zipImages.js";
 import { optionKnowledgeLabel } from "../data/currentDataset.js";
 import { qMetaHtml, buildExplainPrompt, lockedHint } from "./components.js";
@@ -10,11 +14,12 @@ import { renderSourceMedia, sourcesVisible } from "./sourceMedia.js";
 import { sourceReferencesHtml } from "./sourceReferences.js";
 import { renderAnalysisDetails } from "./analysisDetails.js";
 import { questionIdIndex } from "../quiz/filters.js";
-import { getLatestAnsweredResultsByQuestion, saveLocalQuestionOverride } from "../data/storage.js";
+import { getLatestAnsweredResultsByQuestion, saveLocalQuestionOverride, listSessions } from "../data/storage.js";
 import { getQuizQuestionVariant, applyLocalQuestionOverride } from "../quiz/questionVariant.js";
 
 const MAX_RENDER_NO_PAGING = 1000;
 let notebookLmWindow = null;
+let renderGeneration = 0;
 
 function getThemeTokens() {
   return state.themeTokens || {
@@ -33,7 +38,8 @@ function getThemeTokens() {
 }
 
 function getQuizMode() {
-  return $("quizMode")?.value || state.quizConfig?.quizMode || "practice";
+  if (state.view==='quiz' || state.view==='review') return state.quizConfig?.quizMode || "practice";
+  return $("quizMode")?.value || "practice";
 }
 
 function selectedExamsFromList(containerId) {
@@ -241,7 +247,7 @@ export function renderHeaderProgress() {
   const bar = $("headerProgressBar");
 
   if (!state.activeDataset) {
-    subtitle.textContent = "Datensatz laden und Abfrage konfigurieren";
+    subtitle.textContent = "Fach laden und Abfragen verwalten";
     progText.textContent = "—";
     pctEl.textContent = "—";
     bar.style.width = "0%";
@@ -251,9 +257,9 @@ export function renderHeaderProgress() {
 
   const modeLabel = state.view === "quiz" ? "Abfragemodus" :
                     state.view === "review" ? "Auswertung" :
-                    state.view === "search" ? "Suchmodus" : "Konfiguration";
+                    state.view === "search" ? "Suchmodus" : state.view === "overview" ? "Übersicht" : "Konfiguration";
 
-  subtitle.textContent = `${state.activeDataset.label || state.activeDataset.id} · ${modeLabel}`;
+  subtitle.textContent = `${state.activeDataset.label || state.activeDataset.id} · ${modeLabel}${state.sessionName && ['quiz','review'].includes(state.view)?' · '+state.sessionName:''}`;
 
   if (state.view !== "quiz" && state.view !== "review") {
     progText.textContent = "—";
@@ -282,6 +288,20 @@ export function renderHeaderProgress() {
 
 function setSidebarVisibility() {
   const isSession = (state.view === "quiz" || state.view === "review");
+  document.body.dataset.appView=state.view;
+  $('workflowMenu').hidden=!state.activeDataset;
+  $('localTools').hidden=!state.activeDataset;
+  const showQueryActions=Boolean(state.activeDataset) && (state.view==='overview' || (state.view==='config' && state.configTab==='quiz'));
+  $('queryHeaderActions').hidden=!showQueryActions;
+  document.querySelector('.top__right').hidden=state.view==='setup' || state.view==='overview' || state.view==='config';
+  const progressPanel=$('learningProgress');
+  progressPanel.hidden=!(state.activeDataset && state.view==='overview');
+  if (!progressPanel.hidden) {
+    progressPanel.innerHTML=learningProgressHtml(state.questionsAll,listSessions(state.activeDataset.id));
+    progressPanel.querySelector('.learningProgressDetails').open=!window.matchMedia('(max-width:980px)').matches;
+  }
+  $('backOverviewBtn').hidden=!['config','search'].includes(state.view);
+  $('quizFilters').hidden=state.configKind==='highImpact' && $('studyScope').value!=='filtered';
   $("sidebarConfig").hidden = isSession;
   $("sidebarSession").hidden = !isSession;
 
@@ -297,19 +317,20 @@ function setSidebarVisibility() {
   $("configQuiz").hidden = !showQuizConfig;
   $("configSearch").hidden = !showSearchConfig;
 
+  $('startQuizBtn').disabled=state.view==='config' && state.configTab==='quiz' && !(state.preview?.quizCount>0);
   const configDisplay = $("displayControlsConfig");
-  if (configDisplay && state.view === "config") configDisplay.hidden = true;
+  if (configDisplay && state.view !== "search") configDisplay.hidden = true;
 
   const loadDatasetBtn = $("loadDatasetBtn");
   const datasetSelect = $("datasetSelect");
   if (loadDatasetBtn && datasetSelect) {
     const selectedDatasetId = datasetSelect.value;
-    const activeDatasetId = state.activeDataset?.id || null;
+    const activeDatasetId = state.activeDataset?.sourceId || state.activeDataset?.id || null;
     const hasSelection = !!selectedDatasetId;
     const isSameAsLoaded = !!activeDatasetId && selectedDatasetId === activeDatasetId;
     const shouldHighlight = !activeDatasetId || !isSameAsLoaded;
 
-    loadDatasetBtn.disabled = !hasSelection || isSameAsLoaded;
+    loadDatasetBtn.disabled = state.loadingSubject || !hasSelection || isSameAsLoaded;
     loadDatasetBtn.classList.toggle("cta", shouldHighlight && hasSelection);
     loadDatasetBtn.classList.toggle("subtle", !shouldHighlight || !hasSelection);
     if (!loadDatasetBtn.classList.contains("primary")) loadDatasetBtn.classList.add("primary");
@@ -346,7 +367,7 @@ function setSidebarVisibility() {
   const ab = $("abortQuizBtn");
   if (ab) {
     ab.hidden = !(state.view === "quiz" || state.view === "review");
-    ab.textContent = (state.view === "review") ? "Neue Abfrage" : "Abfrage abbrechen";
+    ab.textContent = (state.view === "review") ? "Zur Übersicht" : "Pausieren · Übersicht";
   }
 
   const repeatActions = $("reviewRepeatActions");
@@ -367,9 +388,10 @@ function setSidebarVisibility() {
 
   const hint = $("sessionHint");
   if (hint) {
-    hint.textContent = (state.view === "review")
-      ? "Auswertung abgeschlossen. Starte eine neue Abfrage oder gehe zurück zur Konfiguration."
-      : "Abfrage läuft.";
+    hint.classList.toggle("storageError",Boolean(state.storageError));
+    hint.textContent = state.storageError || ((state.view === "review")
+      ? "Auswertung gespeichert. Du kannst wiederholen oder zur Übersicht zurückkehren."
+      : "Fortschritt wird automatisch gespeichert.");
   }
 }
 
@@ -1523,6 +1545,8 @@ async function jumpToQuestion(qid) {
 }
 
 export async function renderMain() {
+  const generation = ++renderGeneration;
+  renderStudyUi();
   renderHeaderProgress();
   setSidebarVisibility();
 
@@ -1531,17 +1555,15 @@ export async function renderMain() {
   list.innerHTML = "";
 
   if (!state.activeDataset) {
-    mainInfo.innerHTML = `
-      <div class="hero">
-        <div class="hero__title">Willkommen bei JocsJocs 4.0</div>
-        <p class="hero__lead">Erstelle eigene Abfragen aus Klausurfragen oder durchsuche die Fragen eines Fachs. KI-generierte didaktische Einordnungen helfen beim Verstehen. Wiederkehrende Altfragen zeigen dir, welche Aufgaben in mehreren Klausuren vorkommen.</p>
-        <h3>So startest du</h3>
-        <p>Lade links zuerst den Datensatz zu deinem Fach. Danach kannst du eine Abfrage konfigurieren oder in den Suchmodus wechseln.</p>
-        <h3>Hinweise entdecken</h3>
-        <p>Wenn die Lösungen sichtbar sind, kannst du KI-Hinweise an den Antwortoptionen und der Themenzuordnung durch Darüberfahren, Klicken oder Tippen öffnen. Die didaktische Einordnung der gesamten Frage steht unter der Frage und lässt sich aufklappen.</p>
-        <p>Klicke beim Altfragen-Hinweis auf „Fragen anzeigen“, um die zugehörigen Fragen aus anderen Klausuren zu sehen. Verwandte Fragen kannst du über ihren eigenen Hinweis öffnen. Gesperrte Hinweise erklären dir, wann ihre Details verfügbar sind.</p>
-      </div>
-    `;
+    mainInfo.innerHTML=explanationHtml(true);
+    return;
+  }
+  if (state.view==='overview') {
+    try {
+      mainInfo.innerHTML=overviewHtml(listSessions(state.activeDataset.id).filter(s=>!s.kind || s.kind==='quiz'),state.questionsAll);
+    } catch(error) {
+      mainInfo.innerHTML=explanationHtml()+`<p class="storageError">Lokaler Speicher nicht lesbar: ${escapeHtml(error.message)}</p>`;
+    }
     return;
   }
 
@@ -1549,49 +1571,35 @@ export async function renderMain() {
     const qc = state.preview?.quizCount ?? 0;
     const sc = state.preview?.searchCount ?? 0;
     const isSearchTab = state.configTab === "search";
+    const highImpact=!isSearchTab && state.configKind==='highImpact';
+    const impact=studyConfigurationStats();
 
     const suffix = isSearchTab ? "Search" : "Quiz";
     const examCount = selectedExamsFromList("examList" + suffix).length;
     const topics = selectedTopicsFromList("topicList" + suffix);
     mainInfo.innerHTML = `
       <div class="hero">
-        <div class="hero__title">${isSearchTab ? "Suchmodus konfigurieren" : "Abfragemodus konfigurieren"}</div>
+        <div class="hero__title">${isSearchTab ? "Fragen durchsuchen" : highImpact ? "High-Impact-Abfrage konfigurieren" : "Neue Abfrage konfigurieren"}</div>
         <div class="hero__stats">
-          <div class="pill">Fragen ausgewählt: ${isSearchTab ? sc : qc}</div>
-          <div class="pill">Klausuren ausgewählt: ${examCount || 'alle'}</div>
+          <div class="pill">${highImpact?'Fragen im Ausgangspunkt: '+(impact.questions ?? 0):'Fragen ausgewählt: '+(isSearchTab ? sc : qc)}</div>
+          <div class="pill">Klausuren ausgewählt: ${highImpact?(impact.exams ?? 0):(examCount || 'alle')}</div>
           <div class="pill">Themen ausgewählt: ${topics.superTopics.length + topics.subTopics.length || 'alle'}</div>
+          ${highImpact?`<div class="pill">High-Impact-Fragen: ${qc || (impact.pending?'wird aktualisiert …':'noch nicht berechnet')}</div>`:''}
         </div>
         <p><button class="btn cta" id="startFromOverview" ${(isSearchTab ? sc : qc) ? '' : 'disabled'}>${isSearchTab ? 'Fragen durchsuchen' : 'Abfrage starten'}</button></p>
-        <h3>Auswahl konfigurieren</h3>
-        <p>Alle Filter lassen sich kombinieren. Wähle links Klausuren und Themen, suche nach Stichwörtern im Fragentext oder beschränke die Auswahl auf Bildfragen. Optional kannst du die Antworttexte einbeziehen oder nur zuletzt falsch beantwortete Fragen auswählen.</p>
-        <div class="hero__lead">
-          ${isSearchTab
-            ? "Im Suchmodus kannst du deinen Datenbestand explorativ durchsuchen. Nutze links Klausur-, Themen-, Bild- und Suchfilter und entscheide, ob Lösungen direkt sichtbar sein sollen. Die Trefferzahl wird hier live aktualisiert."
-            : "Wähle den passenden Abfragemodus und die Reihenfolge. Die Übersicht oben zeigt dir jederzeit den Umfang deiner Auswahl."}
-        </div>
-        ${isSearchTab
-          ? `<ul class="hero__list">
-               <li>Setze einen Suchbegriff, um Frage- und optional Antworttexte zu durchsuchen.</li>
-               <li>Kombiniere Suchbegriff mit Klausur- und Themenfiltern für sehr präzise Treffer.</li>
-               <li>Aktiviere „Nur KI-modifizierte Fragen“, wenn du gezielt AI-überarbeitete Inhalte prüfen möchtest.</li>
-             </ul>`
-          : `<ul class="hero__list">
-               <li><strong>Übungsmodus:</strong> direktes Feedback nach dem Beantworten einzelner Fragen.</li>
-               <li><strong>Prüfungsmodus:</strong> neutrale Darstellung ohne vorzeitige Ergebnisanzeige, Auswertung am Ende.</li>
-               <li>Wähle optional eine zufällige Teilmenge und mische die Reihenfolge der Fragen oder Antwortoptionen.</li>
-               <li>Alternativ kannst du links zu „Fragen durchsuchen“ wechseln und den gesamten Bestand mit denselben Filtern durchsuchen.</li>
-               <li>Nach Abschluss kannst du die komplette Session oder nur falsche Antworten erneut trainieren.</li>
-             </ul>`}
+        ${configGuideHtml(isSearchTab?'search':highImpact?'highImpact':'normal')}
       </div>
     `;
+    mainInfo.insertAdjacentHTML('beforeend',studySummaryHtml());
     $("startFromOverview")?.addEventListener("click", () => $(isSearchTab ? "startSearchBtn" : "startQuizBtn").click());
     return;
   }
 
   if (state.view === "search") {
-    mainInfo.textContent = `Suchergebnisse: ${state.searchOrder.length} Treffer`;
+    mainInfo.innerHTML = `<section class="hero"><div class="sectionEyebrow">Dein Nachschlagebereich</div><h2>Suchergebnisse · ${state.searchOrder.length} Treffer</h2>${sessionGuideHtml('search')}</section>`;
     await renderQuestionList(getQuestionsByOrder(state.searchOrder), {
       allowSubmit: false,
+      generation,
       showSolutions: $("searchShowSolutions").checked
     });
     return;
@@ -1607,6 +1615,9 @@ export async function renderMain() {
     const base = state.view === "review" ? "Auswertung" : "Abfrage läuft";
     mainInfo.textContent = `${base}: ${submitted}/${total} beantwortet · ${pct}% richtig (${correct}/${submitted || 0})`;
   }
+
+  const sessionStatus=mainInfo.textContent;
+  mainInfo.innerHTML=`<section class="hero sessionGuide"><div class="sectionEyebrow">${escapeHtml(sessionStatus)}</div>${sessionGuideHtml(state.view,getQuizMode()==='exam')}</section>`;
 
   if (state.view === "review") {
     const summary = document.createElement("div");
@@ -1656,10 +1667,10 @@ export async function renderMain() {
 
   const qs = getQuestionsByOrder(state.questionOrder);
   const allowSubmit = (state.view === "quiz");
-  await renderQuestionList(qs, { allowSubmit, showSolutions: solutionsVisible() });
+  await renderQuestionList(qs, { allowSubmit, showSolutions: solutionsVisible(), generation });
 }
 
-async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
+async function renderQuestionList(qs, { allowSubmit, showSolutions, generation }) {
   const isSession = (state.view === "quiz" || state.view === "review");
   const usePaging = qs.length > MAX_RENDER_NO_PAGING;
 
@@ -1693,6 +1704,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
   const list = $("questionList");
 
   for (let idx = 0; idx < slice.length; idx++) {
+    if (generation !== renderGeneration) return;
     const q = slice[idx];
     const qid = q.id;
     const submitted = state.submitted.has(qid);
@@ -1761,6 +1773,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
         else state.forceOriginalQuestionView.add(q.id);
 
         normalizeAnswerStateForVariant(q);
+        if (state.view==='quiz') persistCurrentQuizSession();
 
         await renderAll();
       }));
@@ -1781,6 +1794,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
       const imgRow = document.createElement("div");
       imgRow.className = "imgrow";
       await renderImageGalleryInto(imgRow, imageRefs);
+      if (generation !== renderGeneration) return;
       if (imgRow.children.length) {
         card.appendChild(imgRow);
       } else {
@@ -1829,6 +1843,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
         } else {
           state.answers.set(qid, [origIdx]);
         }
+        if (allowSubmit && !submitted) persistCurrentQuizSession();
       });
 
       const t = document.createElement("div");
@@ -1928,6 +1943,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
             if (cur.delete(origIdx)) state.answers.set(qid, Array.from(cur).sort((x, y) => x - y));
           }
 
+          persistCurrentQuizSession();
           renderAll();
         });
       }
@@ -2127,6 +2143,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
       else card.appendChild(explainWrap);
     }
 
+    if (generation !== renderGeneration) return;
     list.appendChild(card);
   }
 }
