@@ -1,14 +1,14 @@
 {
-  "runId": "7768d51ac80e4fffaa2a28d17ed821ae",
-  "sourceReport": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Beispieldaten Radiologie\\M1 Radiologie\\Analyzer_Arbeitsstand\\runs\\20261118-131214-667051-altfragen-v3.report.json",
-  "sourceAnnotation": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Beispieldaten Radiologie\\M1 Radiologie\\Analyzer_Arbeitsstand\\runs\\20261118-131214-667051-altfragen-v3.report.annotated.json",
-  "sourceAnnotationSha256": "88dc0a473d2fd6551ff7738ee33e403663b078d0c6b7c5bd692a8bccae157228",
-  "label": "alles · Annotationen + Altfragen",
+  "runId": "0750060afa6242069c9f8b82a83addfd",
+  "sourceReport": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Working directory\\Radiologie V4 Übernahme\\Analyzer_Arbeitsstand\\03-Fragenanalyse\\Runs\\restauriert-0750060a\\runs\\result.report.json",
+  "sourceAnnotation": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Working directory\\Radiologie V4 Übernahme\\Analyzer_Arbeitsstand\\03-Fragenanalyse\\Runs\\restauriert-0750060a\\runs\\result.annotated.json",
+  "sourceAnnotationSha256": "2b50dfcaa742d50ff40f847b66b8fafa455978dbab1c41e78c5564e0dc2a1efc",
+  "label": "eingabe · Annotationen + Altfragen",
   "schemaVersion": "2.0",
   "questions": 533,
   "optionExplanations": 1694,
   "questionExplanations": 365,
-  "confirmedTaskGroups": 6,
+  "confirmedTaskGroups": 58,
   "questionStatusCounts": {
     "partial": 365,
     "technical_error": 168
