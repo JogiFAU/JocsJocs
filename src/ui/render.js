@@ -1,10 +1,10 @@
 import { state } from "../state.js";
-import { $, letter, toast } from "../utils.js";
+import { $, letter, toast, examDisplayName } from "../utils.js";
 import { isMultiCorrect, getCorrectIndices, evaluate } from "../quiz/evaluate.js";
 import { submitAnswer, unsubmitAnswer } from "../quiz/session.js";
 import { getImageUrl } from "../data/zipImages.js";
 import { optionKnowledgeLabel } from "../data/currentDataset.js";
-import { qMetaHtml, buildExplainPrompt } from "./components.js";
+import { qMetaHtml, buildExplainPrompt, lockedHint } from "./components.js";
 import { renderAiMarkdown } from "./markdown.js";
 import { renderSourceMedia, sourcesVisible } from "./sourceMedia.js";
 import { sourceReferencesHtml } from "./sourceReferences.js";
@@ -527,7 +527,7 @@ function renderExamList(containerId, exams, statsMap) {
 
     const name = document.createElement("div");
     name.className = "examname";
-    name.textContent = exam;
+    name.textContent = examDisplayName(exam);
 
     left.appendChild(cb);
     left.appendChild(name);
@@ -1222,7 +1222,7 @@ function buildClusterModalQuestionCard(q, ordinal, { showExplanations = true, sh
     <div class="qcard clusterModal__card">
       <div class="qmeta">
         <span class="pill">#${ordinal}</span>
-        ${q.examName ? `<span class="pill">${escapeHtml(q.examName)}</span>` : ""}
+        ${q.examName ? `<span class="pill">${escapeHtml(examDisplayName(q.examName))}</span>` : ""}
       </div>
       <div class="qtext">${escapeHtml(q.text || "")}</div>
       <div class="opts">${answers}</div>
@@ -1232,9 +1232,9 @@ function buildClusterModalQuestionCard(q, ordinal, { showExplanations = true, sh
   `;
 }
 
-export function openClusterQuestionsDialog(questionId) {
+export function openClusterQuestionsDialog(questionId, relatedOnly = false) {
   const source = state.questionsAll.find(q => q.id === questionId);
-  if (!source || !source.clusterId) return;
+  if (!source || (relatedOnly ? !source.relatedQuestionIds?.length : !source.clusterId)) return;
 
   const dialog = $("clusterQuestionsDialog");
   if (!dialog || typeof dialog.showModal !== "function") return;
@@ -1245,7 +1245,7 @@ export function openClusterQuestionsDialog(questionId) {
   const explainToggle = $("clusterDialogShowExplanations");
   const solutionsToggle = $("clusterDialogShowSolutions");
 
-  const relatedIds = [source.id, ...(source.clusterRelatedIds || [])];
+  const relatedIds = [source.id, ...((relatedOnly ? source.relatedQuestionIds : source.clusterRelatedIds) || [])];
   const idx = questionIdIndex(state.questionsAll);
   const clusterQuestions = relatedIds.map(id => idx.get(id)).filter(Boolean);
 
@@ -1264,8 +1264,8 @@ export function openClusterQuestionsDialog(questionId) {
     }
   };
 
-  if (title) title.textContent = "Verwandte häufige Altfragen";
-  if (subtitle) subtitle.textContent = `${clusterQuestions.length} Fragen · ${source.clusterLabel || "Fragencluster"}`;
+  if (title) title.textContent = relatedOnly ? 'Verwandte Fragen' : 'Bestätigte Altfragen';
+  if (subtitle) subtitle.textContent = `${clusterQuestions.length} Fragen · ${relatedOnly ? 'Thematische Verwandtschaft' : source.clusterLabel || 'Fragencluster'}`;
   if (explainToggle) {
     explainToggle.checked = true;
     explainToggle.onchange = () => renderClusterModalQuestions();
@@ -1533,25 +1533,13 @@ export async function renderMain() {
   if (!state.activeDataset) {
     mainInfo.innerHTML = `
       <div class="hero">
-        <div class="hero__title">Willkommen bei JocsJocs 2.0</div>
-        <div class="hero__stats">
-          <div class="pill">🗂️ Filter nach Klausuren</div>
-          <div class="pill">🏷️ Filter nach Themen & Unterthemen</div>
-          <div class="pill">🖼️ Filter nach Fragen mit/ohne Bilder</div>
-          <div class="pill">🎯 Zufälliges Subset & Shuffle</div>
-          <div class="pill">⭐ Erkennung häufiger Altfragen</div>
-          <div class="pill">🤖 KI-generierte Inhaltliche Einordnung</div>
-        </div>
-        <div class="hero__lead">
-          Du kannst mit wenigen Klicks genau die Fragen auswählen, die für deinen Lernstand relevant sind, und zwischen prüfungsnaher Abfrage und freier Suche wechseln. Die Klausur- und Themenmenüs können zur übersicht eingeklappt werden.
-        </div>
-        <ul class="hero__list">
-          <li><strong>Klausur-Training:</strong> trainiere gezielt einzelne Klausuren oder kombiniere mehrere Prüfungen zu einem eigenen Lernset.</li>
-          <li><strong>Themenfokus:</strong> arbeite nur zu ausgewählten Über- und Unterthemen, um Wissenslücken systematisch zu schließen.</li>
-          <li><strong>Prüfungssimulation:</strong> nutze den Prüfungsmodus ohne direkte Ergebnisanzeige und werte deinen Stand anschließend aus.</li>
-          <li><strong>Wiederholungslernen:</strong> konzentriere dich auf falsch beantwortete Fragen und wiederhole kritische Inhalte effizient.</li>
-          <li><strong>Mustererkennung:</strong> erkenne häufig wiederkehrende Altfragen-Cluster und priorisiere häufige Schwerpunkte.</li>
-        </ul>
+        <div class="hero__title">Willkommen bei JocsJocs 4.0</div>
+        <p class="hero__lead">Erstelle eigene Abfragen aus Klausurfragen oder durchsuche die Fragen eines Fachs. KI-generierte didaktische Einordnungen helfen beim Verstehen. Wiederkehrende Altfragen zeigen dir, welche Aufgaben in mehreren Klausuren vorkommen.</p>
+        <h3>So startest du</h3>
+        <p>Lade links zuerst den Datensatz zu deinem Fach. Danach kannst du eine Abfrage konfigurieren oder in den Suchmodus wechseln.</p>
+        <h3>Hinweise entdecken</h3>
+        <p>Wenn die Lösungen sichtbar sind, kannst du KI-Hinweise an den Antwortoptionen und der Themenzuordnung durch Darüberfahren, Klicken oder Tippen öffnen. Die didaktische Einordnung der gesamten Frage steht unter der Frage und lässt sich aufklappen.</p>
+        <p>Klicke beim Altfragen-Hinweis auf „Fragen anzeigen“, um die zugehörigen Fragen aus anderen Klausuren zu sehen. Verwandte Fragen kannst du über ihren eigenen Hinweis öffnen. Gesperrte Hinweise erklären dir, wann ihre Details verfügbar sind.</p>
       </div>
     `;
     return;
@@ -1562,16 +1550,24 @@ export async function renderMain() {
     const sc = state.preview?.searchCount ?? 0;
     const isSearchTab = state.configTab === "search";
 
+    const suffix = isSearchTab ? "Search" : "Quiz";
+    const examCount = selectedExamsFromList("examList" + suffix).length;
+    const topics = selectedTopicsFromList("topicList" + suffix);
     mainInfo.innerHTML = `
       <div class="hero">
         <div class="hero__title">${isSearchTab ? "Suchmodus konfigurieren" : "Abfragemodus konfigurieren"}</div>
         <div class="hero__stats">
-          <div class="pill">${isSearchTab ? `Ausgewählte Fragen: ${sc}` : `Ausgewählte Fragen: ${qc}`}</div>
+          <div class="pill">Fragen ausgewählt: ${isSearchTab ? sc : qc}</div>
+          <div class="pill">Klausuren ausgewählt: ${examCount || 'alle'}</div>
+          <div class="pill">Themen ausgewählt: ${topics.superTopics.length + topics.subTopics.length || 'alle'}</div>
         </div>
+        <p><button class="btn cta" id="startFromOverview" ${(isSearchTab ? sc : qc) ? '' : 'disabled'}>${isSearchTab ? 'Fragen durchsuchen' : 'Abfrage starten'}</button></p>
+        <h3>Auswahl konfigurieren</h3>
+        <p>Alle Filter lassen sich kombinieren. Wähle links Klausuren und Themen, suche nach Stichwörtern im Fragentext oder beschränke die Auswahl auf Bildfragen. Optional kannst du die Antworttexte einbeziehen oder nur zuletzt falsch beantwortete Fragen auswählen.</p>
         <div class="hero__lead">
           ${isSearchTab
             ? "Im Suchmodus kannst du deinen Datenbestand explorativ durchsuchen. Nutze links Klausur-, Themen-, Bild- und Suchfilter und entscheide, ob Lösungen direkt sichtbar sein sollen. Die Trefferzahl wird hier live aktualisiert."
-            : "Im Abfragemodus stellst du dir eine gezielte Trainingssession zusammen: wähle Klausuren/Themen, beschränke auf Bildfragen oder nur zuletzt falsche Fragen, nutze optional Zufalls-Subset sowie Shuffle und entscheide zwischen Übungs- und Prüfungsmodus. Ebenso kann nach einem Schlagwort in den Fragen und optional auch Antwortoptionen gefiltert werden (z.B. alle Fragen zu Diazepam). Alle Filter können kombiniert werden."}
+            : "Wähle den passenden Abfragemodus und die Reihenfolge. Die Übersicht oben zeigt dir jederzeit den Umfang deiner Auswahl."}
         </div>
         ${isSearchTab
           ? `<ul class="hero__list">
@@ -1582,10 +1578,13 @@ export async function renderMain() {
           : `<ul class="hero__list">
                <li><strong>Übungsmodus:</strong> direktes Feedback nach dem Beantworten einzelner Fragen.</li>
                <li><strong>Prüfungsmodus:</strong> neutrale Darstellung ohne vorzeitige Ergebnisanzeige, Auswertung am Ende.</li>
+               <li>Wähle optional eine zufällige Teilmenge und mische die Reihenfolge der Fragen oder Antwortoptionen.</li>
+               <li>Alternativ kannst du links zu „Fragen durchsuchen“ wechseln und den gesamten Bestand mit denselben Filtern durchsuchen.</li>
                <li>Nach Abschluss kannst du die komplette Session oder nur falsche Antworten erneut trainieren.</li>
              </ul>`}
       </div>
     `;
+    $("startFromOverview")?.addEventListener("click", () => $(isSearchTab ? "startSearchBtn" : "startQuizBtn").click());
     return;
   }
 
@@ -1740,6 +1739,10 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
     card.appendChild(meta);
     card.appendChild(text);
 
+    meta.querySelector('[data-related-show]')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openClusterQuestionsDialog(q.id, true);
+    });
     const showClusterBtn = meta.querySelector("[data-cluster-show]");
     if (showClusterBtn) {
       showClusterBtn.addEventListener("click", (ev) => {
@@ -1807,7 +1810,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
       const sourceIdx = Number.isInteger(sourceIdxRaw) ? sourceIdxRaw : origIdx;
       const wrap = document.createElement("label");
       wrap.className = "opt";
-      wrap.dataset.tipToggle = "";
+
 
       const inp = document.createElement("input");
       inp.type = multi ? "checkbox" : "radio";
@@ -1854,6 +1857,8 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
       if (showAiExplanationTooltips) {
         const tooltipText = aiExplanationTooltipForOption(q, sourceIdx);
         if (tooltipText) {
+          wrap.dataset.tipToggle = "";
+          wrap.tabIndex = 0;
           const tip = document.createElement("span");
           tip.className = "optExplainTooltip";
           tip.setAttribute("role", "tooltip");
@@ -1968,7 +1973,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions }) {
       aiHintText.innerHTML = renderAiMarkdown(q.aiReasonDetailed);
       if(q.datasetAnnotation?.analysisMode==='model_knowledge_only') {
         const basis=document.createElement('p');basis.className='small';
-        basis.textContent='Modellwissen · ohne Quellenprüfung. Auch ein bestandener Konsistenzcheck ist keine Quellenbestätigung.';
+        basis.textContent='Modellwissen · ohne Quellenprüfung.';
         aiHintBody.appendChild(basis);
       }
 

@@ -43,7 +43,8 @@ export function normalizeCurrentQuestion(q, dataset, jsonUrl) {
   });
   const objectiveGroups = groups(a.relationships?.objectiveGroupIds, "objectiveGroups");
   const taskGroups = groups(a.relationships?.taskGroupIds, "taskGroups");
-  const primary = [...objectiveGroups].sort((x,y) => y.knownExamCount-x.knownExamCount || y.occurrences-x.occurrences || x.groupId.localeCompare(y.groupId))[0];
+  const repetitionGroups = registry.comparisonVersion ? taskGroups : objectiveGroups;
+  const primary = [...repetitionGroups].sort((x,y) => y.knownExamCount-x.knownExamCount || y.occurrences-x.occurrences || x.groupId.localeCompare(y.groupId))[0];
   const optionExplanations = q.answers.map((answer, answerIndex) => ({ answerIndex, text:optionExplanation(answer,answerIndex) })).filter(a => a.text);
   const original = a.originalAnswerKey?.status === "provided" ? new Set(a.originalAnswerKey.optionIds) : new Set();
   const correct = q.answers.flatMap((answer, index) => original.has(answer.analysis.optionId) ? [index] : []);
@@ -83,15 +84,66 @@ export function normalizeCurrentQuestion(q, dataset, jsonUrl) {
     clusterId:primary?.groupId || null, clusterLabel:primary?.label || null,
     clusterSize:primary?.occurrences || 0,clusterExamCount:primary?.knownExamCount || 0,
     clusterExamShare:archiveExams ? (primary?.knownExamCount || 0)/archiveExams : 0,clusterRelatedIds:[],
-    isHighRelevanceCluster:objectiveGroups.some(g => g.knownExamCount >= 2),
+    isHighRelevanceCluster:repetitionGroups.some(g => g.knownExamCount >= 2),
     isRepeatedTask:taskGroups.some(g => g.knownExamCount >= 2)
   };
 }
 
 export function linkCurrentQuestions(questions) {
   const byOccurrence = new Map(questions.filter(q => q.analysis).map(q => [q.analysis.occurrenceId,q.id]));
-  for (const q of questions.filter(q => q.analysis)) {
-    const group = q.relationshipDetails.objectiveGroups.find(g => g.groupId === q.clusterId);
-    q.clusterRelatedIds = (group?.members || []).filter(id => id !== q.analysis.occurrenceId && byOccurrence.has(id)).map(id => byOccurrence.get(id));
+  const current = questions.filter(q => q.analysis);
+  const adjacency = new Map(current.map(q => [q.analysis.occurrenceId, new Set()]));
+  const connect = (left, right) => {
+    if (!adjacency.has(left) || !adjacency.has(right)) return;
+    adjacency.get(left).add(right);
+    adjacency.get(right).add(left);
+  };
+  for (const q of current) {
+    for (const group of q.relationshipDetails.taskGroups) {
+      for (const member of group.members) connect(q.analysis.occurrenceId, member);
+    }
+    for (const relation of q.relationshipDetails.relations) {
+      const exact = relation.relation === 'exact_duplicate';
+      const repeat = ['equivalent_task','near_repeat'].includes(relation.relation) ||
+        relation.modelRelation === 'near_repeat';
+      if (exact || (repeat && ['medium','high'].includes(relation.confidence)))
+        connect(relation.left, relation.right);
+    }
+  }
+  const visited = new Set();
+  const byId = new Map(current.map(q => [q.id,q]));
+  const allExams = new Set(current.map(q => q.examName).filter(Boolean)).size;
+  for (const start of adjacency.keys()) {
+    if (visited.has(start)) continue;
+    const members = [];
+    const pending = [start];
+    while (pending.length) {
+      const id = pending.pop();
+      if (visited.has(id)) continue;
+      visited.add(id);
+      members.push(id);
+      pending.push(...adjacency.get(id));
+    }
+    if (members.length < 2) continue;
+    members.sort();
+    const rows = members.map(id => byId.get(byOccurrence.get(id)));
+    const examCount = new Set(rows.map(q => q.examName).filter(Boolean)).size;
+    for (const q of rows) {
+      q.clusterId = 'connected-' + members[0];
+      q.clusterSize = members.length;
+      q.clusterExamCount = examCount;
+      q.clusterExamShare = allExams ? examCount / allExams : 0;
+      q.isHighRelevanceCluster = examCount >= 2;
+      q.isRepeatedTask = examCount >= 2;
+      q.clusterRelatedIds = rows.filter(other => other !== q).map(other => other.id);
+    }
+  }
+  for (const q of current) {
+    const group = [...q.relationshipDetails.taskGroups,...q.relationshipDetails.objectiveGroups].find(g => g.groupId === q.clusterId);
+    q.relatedQuestionIds = [...new Set(q.relationshipDetails.relations
+      .filter(r => ['related_topic','same_learning_objective','variant_family'].includes(r.modelRelation || r.relation) && ['medium','high'].includes(r.confidence))
+      .map(r => byOccurrence.get(r.left === q.analysis.occurrenceId ? r.right : r.left))
+      .filter(id => id && id !== q.id))];
+    if (!q.clusterId?.startsWith('connected-')) q.clusterRelatedIds = (group?.members || []).filter(id => id !== q.analysis.occurrenceId && byOccurrence.has(id)).map(id => byOccurrence.get(id));
   }
 }

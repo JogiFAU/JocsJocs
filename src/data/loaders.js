@@ -1,3 +1,4 @@
+import { setExamDisplayNames } from "../utils.js";
 import { state } from "../state.js";
 import { normalizeLegacyQuestion, annotateLegacyClusters } from "./legacyDataset.js";
 import { normalizeCurrentQuestion, linkCurrentQuestions } from "./currentDataset.js";
@@ -23,5 +24,6 @@ export async function loadJsonUrls(urls) {
   const questions = [...byId.values()];
   annotateLegacyClusters(questions.filter(q => !q.analysis));
   linkCurrentQuestions(questions);
+  setExamDisplayNames(questions.map(q => q.examName));
   state.questionsAll = questions;
 }

@@ -367,6 +367,10 @@ export function wireUiEvents() {
   document.addEventListener("click", (ev) => {
     const toggleRoot = ev.target.closest("[data-tip-toggle]");
     if (toggleRoot) {
+      // A label forwards its click to its input. Suppress that second click
+      // once this row serves as a solution tooltip instead of answer input.
+      if (toggleRoot.matches('.opt') && !ev.target.closest('a, button'))
+        ev.preventDefault();
       const isOpen = toggleRoot.classList.contains("is-open");
       document.querySelectorAll("[data-tip-toggle].is-open").forEach((el) => {
         if (el !== toggleRoot) el.classList.remove("is-open");
@@ -381,6 +385,11 @@ export function wireUiEvents() {
   });
 
   document.addEventListener("keydown", (ev) => {
+    if (['Enter', ' '].includes(ev.key) && ev.target.matches('.lockedHint, .opt[data-tip-toggle]')) {
+      ev.preventDefault();
+      ev.target.click();
+      return;
+    }
     if (ev.key !== "Escape") return;
     document.querySelectorAll("[data-tip-toggle].is-open").forEach((el) => {
       el.classList.remove("is-open");

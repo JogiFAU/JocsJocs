@@ -1,5 +1,7 @@
-Anzeige-App 3.9.8
+Testpaket für die bestehende Anzeige-App
 
-App-Ordner entpacken. Kopierfertiges Datenpaket separat entpacken und dessen analyzer-Ordner vollständig in datasets/ kopieren. Inhalt seiner manifest-entry.example.json manuell als Objekt in die datasets-Liste von datasets/manifest.json einfügen. Vorhandene Einträge behalten; IDs nicht doppelt eintragen. Danach START_TEST_VIEWER.bat starten. Im Browser Datensatz auswählen und laden. Strg+C beendet den lokalen Server.
+ZIP in einen neuen Ordner entpacken. Im Unterordner Testanzeige START_TEST_VIEWER.bat starten. Alternativ: python START_TEST_VIEWER.py. Der lokale Testserver wählt einen freien Port und öffnet den Browser. Beim ersten Laden den vorkonfigurierten Datensatz auswählen und laden. Nicht index.html direkt über file:// öffnen.
 
-Bereits heruntergeladene Testpakete: Der Ordner Testanzeige/datasets/export kann stattdessen vollständig in datasets/ kopiert werden. Den passenden Eintrag aus Testanzeige/datasets/manifest.json übernehmen; er verwendet datasets/export/. Für mehrere Exporte jeweils die neuen eindeutigen analyzer-Ordner verwenden.
+Die HTML-/JS-/CSS-Dateien der Anzeige-App sind unverändert kopiert. Nur datasets/manifest.json und die Exportdateien wurden erzeugt. Annotationen und Altfragengruppen befinden sich zusammen in datasets/export/data.annotated.json. EXPORT_INFO.json enthält Prüfsummen, Anzahlen und die Datenpfade. Technische Laufberichte sind keine Datensätze für die Anzeige-App.
+
+Vorhandene technische Fragenfehler bleiben erhalten. Bei deaktivierter Modellprüfung erscheinen nur bestätigte exakte Altfragengruppen, nicht alle Retrievalkandidaten. Fragebilder nutzen wie die Original-App deren JSZip-CDN-Einbindung; die Anzeige-App selbst wurde hierfür nicht angepasst.

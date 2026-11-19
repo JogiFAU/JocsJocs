@@ -88,3 +88,27 @@ export function confirmDialog({ title = "Bestätigung", message = "", confirmTex
     dlg.showModal();
   });
 }
+
+
+// Preserve exam identity for filtering, saved progress and recurrence counts.
+const examLabels = new Map();
+
+export function setExamDisplayNames(names) {
+  examLabels.clear();
+  const groups = new Map();
+  for (const name of [...new Set(names.filter(Boolean))].sort()) {
+    const label = examDisplayName(name);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(name);
+  }
+  for (const [label, originals] of groups) {
+    originals.forEach((name, index) =>
+      examLabels.set(name, originals.length > 1 ? `${label} (${index + 1})` : label));
+  }
+}
+
+export function examDisplayName(name) {
+  if (examLabels.has(name)) return examLabels.get(name);
+  const original = String(name || '');
+  return original.replace(/^\s*\d{4}[-_]\d{2}[-_](?:\d{2}|xx)\s*/i, '').trim() || original;
+}

@@ -1,3 +1,4 @@
+import { examDisplayName } from '../utils.js';
 import { letter } from "../utils.js";
 import {
   evaluateMaintenanceTrafficRules,
@@ -115,7 +116,7 @@ function maintenanceTrafficLightHtml(q) {
 function topicInfoHtml(q, showAnalysisDetails = true) {
   const topicPath = [q.aiSuperTopic, q.aiSubtopic].filter(Boolean).join(" → ");
   if (!topicPath) return "";
-  if (!showAnalysisDetails) return `<span class="pill qmetaTopic">${escHtml(topicPath)}</span>`;
+  if (!showAnalysisDetails) return lockedHint(escHtml(topicPath), "pill qmetaTopic");
 
   const reasonRaw = q.aiTopicReason || "Keine Begründung im Datensatz gefunden.";
   const reason = formatAiTextForDisplay(reasonRaw);
@@ -128,6 +129,10 @@ function topicInfoHtml(q, showAnalysisDetails = true) {
       </span>
     </span>
   `;
+}
+
+export function lockedHint(label, className = 'pill') {
+  return `<span class="${className} lockedHint" data-tip-toggle tabindex="0" role="button" aria-label="${label} · Details werden erst in der Lösungsansicht angezeigt">${label}<span class="lockedHint__tip" role="tooltip">Wird erst in der Lösungsansicht angezeigt.</span></span>`;
 }
 
 export function qMetaHtml(q, ordinal, {
@@ -153,7 +158,7 @@ export function qMetaHtml(q, ordinal, {
   const img = (q.imageFiles && q.imageFiles.length)
     ? (imageClusterBadge || `<span class="pill">🖼️ ${q.imageFiles.length}</span>`)
     : "";
-  const exam = q.examName ? `<span class="pill">${q.examName}</span>` : "";
+  const exam = q.examName ? `<span class="pill">${escHtml(examDisplayName(q.examName))}</span>` : "";
   const topic = showTopics ? topicInfoHtml(q, showAnalysisDetails) : "";
 
   const aiChangedBadge = showAnalysisDetails && q.aiChangedAnswers
@@ -194,8 +199,10 @@ export function qMetaHtml(q, ordinal, {
   const clusterExamCount = Math.max(0, Number(q.clusterExamCount || 0));
   const clusterExamSharePct = Math.round(Math.max(0, Number(q.clusterExamShare || 0)) * 100);
   const clusterFrequencyTier = getAltQuestionFrequencyTier(q);
-  const clusterBadge = showAnalysisDetails && q.isHighRelevanceCluster
-    ? `
+  const clusterBadge = !q.isHighRelevanceCluster ? ""
+    : !showAnalysisDetails
+      ? lockedHint(`⭐ Altfrage: ${clusterExamCount} Klausuren`, `pill clusterBadge ${clusterFrequencyTier.className}`)
+      : `
       <span class="pill clusterBadge ${clusterFrequencyTier.className}" data-tip-toggle tabindex="0" aria-label="Altfrage kam in ${clusterExamCount} Klausuren vor (${clusterFrequencyTier.label})">
         ⭐ Altfrage: ${clusterExamCount} Klausuren
         <span class="clusterBadge__tip" role="tooltip">
@@ -207,14 +214,20 @@ export function qMetaHtml(q, ordinal, {
           <button class="btn primary clusterBadge__action clusterBadge__action--cta" type="button" data-cluster-show="${q.id}">Fragen anzeigen</button>
         </span>
       </span>
-    `
-    : "";
+    `;
+
+  const relatedCount = q.relatedQuestionIds?.length || 0;
+  const relatedBadge = !relatedCount ? ""
+    : showAnalysisDetails
+      ? `<button class="btn" type="button" data-related-show="${escHtml(q.id)}">Verwandte Fragen (${relatedCount})</button>`
+      : lockedHint(`Verwandte Fragen (${relatedCount})`);
 
   return `
     <span class="pill">#${ordinal}</span>
     ${exam}
     ${topic}
     ${clusterBadge}
+    ${relatedBadge}
     ${img}
     ${aiReconstructionBadge}
     ${localOverrideBadge}
@@ -228,7 +241,7 @@ export function buildExplainPrompt(q, selectedOriginal) {
   const opts = (q.answers || []).map((a, i) => `${letter(i)}) ${a.text}`).join("\n");
   const sel = (selectedOriginal && selectedOriginal.length) ? selectedOriginal.map(i => letter(i)).join(", ") : "(keine)";
   const corr = (q.correctIndices || []).map(i => letter(i)).join(", ");
-  const exam = q?.examName ? `Herkunfts-Klausur: ${q.examName}` : "Herkunfts-Klausur: unbekannt";
+  const exam = q?.examName ? `Herkunfts-Klausur: ${examDisplayName(q.examName)}` : "Herkunfts-Klausur: unbekannt";
   return [
     "Erkläre mir diese MC-Frage auf Prüfungsniveau:",
     exam,
