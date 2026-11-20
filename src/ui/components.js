@@ -122,7 +122,7 @@ function topicInfoHtml(q, showAnalysisDetails = true) {
   const reason = formatAiTextForDisplay(reasonRaw);
   return `
     <span class="pill qmetaTopic" data-tip-toggle tabindex="0" aria-label="Themenzuordnung mit KI-Begründung">
-      ${topicPath}
+      ${escHtml(topicPath)}
       <span class="qmetaTopic__tip" role="tooltip">
         <strong>KI-Themenzuordnung</strong>
         <span>${reason}</span>
@@ -163,10 +163,6 @@ export function qMetaHtml(q, ordinal, {
 
   const aiChangedBadge = showAnalysisDetails && q.aiChangedAnswers
     ? `<span class="pill" title="KI-Hinweis: Die Antwortoption(en) wurden gegenüber der ursprünglichen Markierung verändert." aria-label="Antwortoptionen wurden durch KI verändert">🤖 Antwort geändert</span>`
-    : "";
-
-  const aiDisagreesBadge = showAnalysisDetails && q.aiDisagreesWithOriginalAnswer
-    ? `<span class="pill" title="KI-Hinweis: Die KI widerspricht der ursprünglich als richtig markierten Antwort." aria-label="KI widerspricht der ursprünglichen richtigen Antwort">🤖 KI widerspricht Originallösung</span>`
     : "";
 
   const aiReconstructionBadge = showAiReconstructionBadge
@@ -232,7 +228,6 @@ export function qMetaHtml(q, ordinal, {
     ${aiReconstructionBadge}
     ${localOverrideBadge}
     ${aiChangedBadge}
-    ${aiDisagreesBadge}
     <span class="qmetaRight">${maintenance}</span>
   `;
 }

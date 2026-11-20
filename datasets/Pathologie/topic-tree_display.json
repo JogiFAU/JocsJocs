@@ -1,0 +1,92 @@
+{
+  "subject": "Pathologie (Modul 1)",
+  "superTopics": [
+    {
+      "name": "Grundlagen",
+      "subtopics": [
+        "Allgemeines",
+        "Sektionspathologie",
+        "Histopathologie & Schnellschnittdiagnostik",
+        "Färbemethoden & Digitale Pathologie"
+      ]
+    },
+    {
+      "name": "Gewebeanpassung & Präkanzerosen",
+      "subtopics": [
+        "Hypertrophie / Hyperplasie",
+        "Atrophie, Aplasie & Hypoplasie",
+        "Metaplasie und Dysplasie"
+      ]
+    },
+    {
+      "name": "Zellschädigung & Gewebereparation",
+      "subtopics": [
+        "Reversible Zellschädigung",
+        "Nekrose",
+        "Apoptose",
+        "Gewebereparation"
+      ]
+    },
+    {
+      "name": "Kardiovaskuläre Pathologie",
+      "subtopics": [
+        "Gefäßpathologien",
+        "Ischämischer & Hämorrhagischer Infarkt",
+        "Gerinnungsstörungen",
+        "Herzpathologien"
+      ]
+    },
+    {
+      "name": "Entzündungspathologie & Infektionen",
+      "subtopics": [
+        "Grundlagen",
+        "Entzündungsformen",
+        "Chronische und Granulomatöse Entzündungen",
+        "Entzündungsausbreitung und Spezielle Infektionserreger"
+      ]
+    },
+    {
+      "name": "Immunpathologie und Amyloidosen",
+      "subtopics": [
+        "Hypersensitivitätsreaktionen",
+        "Autoimmunerkrankungen und Transplantationspathologie",
+        "Amyloidosen"
+      ]
+    },
+    {
+      "name": "Tumorpathologie",
+      "subtopics": [
+        "Tumordefinition",
+        "Klassifikation und Spezielle Tumorentitäten",
+        "Grading, Staging und Metastasierung",
+        "Kausale Karzinogenese"
+      ]
+    },
+    {
+      "name": "Molekulare Pathologie",
+      "subtopics": [
+        "Onkogene, Tumorsuppressorgene & Signalwege",
+        "DNA-Reparatur & Angiogenese",
+        "Prädiktive Biomarker & Zielgerichtete Therapie"
+      ]
+    },
+    {
+      "name": "Neuropathologie",
+      "subtopics": [
+        "Zerebrovaskuläre Erkrankungen",
+        "Entzündliche und Infektiöse ZNS-Erkrankungen",
+        "Neurodegenerative Erkrankungen",
+        "Tumoren des ZNS und PNS"
+      ]
+    },
+    {
+      "name": "Spezielle Organpathologie",
+      "subtopics": [
+        "Respiratorisches System",
+        "Gastrointestinaltrakt",
+        "Leber, Galle und Pankreas",
+        "Niere, Endokrinum und Lymphsystem"
+      ]
+    }
+  ]
+}

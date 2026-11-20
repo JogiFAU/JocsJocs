@@ -1,42 +1,52 @@
 {
-  "viewerVersion": "4.1",
-  "runId": "4d27034096c4427b8a0001358f654aca",
-  "sourceReport": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Pakete\\study-kiu9cqg9\\viewer.report.json",
-  "sourceAnnotation": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Pakete\\study-kiu9cqg9\\data.annotated.json",
-  "sourceAnnotationSha256": "21669d17407f0c510e5c11c59078254ca5caf0722bd6851c0766427cb18542f7",
-  "label": "Radiologie · Annotationen + Altfragen",
+  "runId": "0984145ce261408ab4711ff65930151d",
+  "sourceReport": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Beispieldaten Radiologie\\M1 Radiologie\\Analyzer_Arbeitsstand\\Exporte\\M1-Radiologie-0984145ce261\\M1-Radiologie-Zusammenstellung.report.json",
+  "sourceAnnotation": "C:\\Users\\Jogi\\Documents\\ChatGPT\\Exam Analyzer\\Beispieldaten Radiologie\\M1 Radiologie\\Analyzer_Arbeitsstand\\Exporte\\M1-Radiologie-0984145ce261\\data.annotated.json",
+  "sourceAnnotationSha256": "8ddfa2a12f5feaabf8f314c66fc6b0515504b2208fdc85535e220cbdf284b1ab",
+  "label": "M1 Radiologie",
   "schemaVersion": "2.0",
   "completed": true,
   "recurrenceCoverage": {
     "questions": 533,
-    "candidatePairs": 1178,
+    "candidatePairs": 1353,
     "possiblePairs": 141778,
     "reviewEnabled": true,
     "reviewThreshold": 0.0,
     "thresholdIsProbability": false,
-    "maxNewModelPairs": 500,
-    "newModelCalls": 256,
-    "cachedPairReviews": 786,
+    "maxNewModelPairs": null,
+    "newModelCalls": 117,
+    "cachedPairReviews": 0,
     "reviewStates": {
-      "deterministic": 7,
-      "reviewed": 1042,
-      "missing_image": 129
+      "deterministic": 6,
+      "reviewed": 892,
+      "transitive": 455
     },
-    "unreviewedPairs": 129,
-    "uncertainPairs": 186,
-    "sameExamDuplicatePairs": 1,
-    "allPairsChecked": false
+    "unreviewedPairs": 0,
+    "uncertainPairs": 0,
+    "sameExamDuplicatePairs": 0,
+    "allPairsChecked": false,
+    "candidateStrictness": 0.05,
+    "candidatePlanId": "43a8711fbf742083562e0a46547751dd45afa4309baa5b6d4a1170f4cee96f71",
+    "allCandidatesResolved": true,
+    "transitivelyCoveredPairs": 455
   },
-  "packagedAnnotationSha256": "21669d17407f0c510e5c11c59078254ca5caf0722bd6851c0766427cb18542f7",
+  "packagedAnnotationSha256": "8ddfa2a12f5feaabf8f314c66fc6b0515504b2208fdc85535e220cbdf284b1ab",
   "highImpactCalculationId": null,
   "questions": 533,
-  "optionExplanations": 1694,
-  "questionExplanations": 365,
-  "confirmedTaskGroups": 142,
+  "optionExplanations": 2499,
+  "questionExplanations": 533,
+  "confirmedTaskGroups": 89,
   "questionStatusCounts": {
-    "partial": 365,
-    "technical_error": 168
+    "partial": 533
   },
+  "fieldLocations": {
+    "options": "questions[].answers[].analysis",
+    "questionExplanation": "questions[].analysis.solution.explanation",
+    "groups": "annotation.relationships.taskGroups / objectiveGroups",
+    "groupMembership": "questions[].analysis.relationships",
+    "unfinishedQuestions": "questions[].analysis.status"
+  },
+  "viewerVersion": "4.1",
   "viewerSourceFiles": {
     "index.html": "75d21660c77b2e5eef564c7f4e5833e4b6ce9eb6cdc2ee8d5934a51185085d15",
     "source-viewer.html": "34467e6b40cf52e3074bd11207505fef3a483689dd925db0a43e9563c0e18c9c",
@@ -56,8 +66,8 @@
     "src/quiz/evaluate.js": "7ce324dcfdf7cabe084f18f0ea6e4e3e0740228b85b40f4a877f42fefaaf6eb8",
     "src/quiz/filters.js": "b6327db58d8d18b87553de1b1a96aeb2d75924604245dbbfe7fa6e20bb567485",
     "src/quiz/questionVariant.js": "da00a2f7928167de90673bd66c55e4cde72d6b1367e66f1416e152ea31f3d3fc",
-    "src/quiz/session.js": "9ebeef383dcad100af6f030ea84b9893cbbc9d05dc2307f33f1df38463c6cff4",
-    "src/quiz/sessionRecord.js": "2fcbd99c1f67da9e13a30a395bbb565290901ee04f974c116f5cfbd0a492a511",
+    "src/quiz/session.js": "ecbb990efeb31a7541473a775f9c7b25ba75cd05b45b965787e4f53f4789094d",
+    "src/quiz/sessionRecord.js": "d610de5f50943c6623f4c8aed2231be9fdaf2488c5ae9995425740387e74cf8d",
     "src/rules/questionPresentationRules.js": "f3bd0e1844f2ef0244d9be2b2eca342524b4daa35e5d0cc6cd69a56ce45ab974",
     "src/state.js": "d743934485b68763a3932ea777f0c07b6ed7866d0e921977cdfe934d060009cf",
     "src/study/client.js": "8c70f0711a747c154851b0d05677e853c446306233e76ab6543033980cf932fa",
@@ -71,8 +81,8 @@
     "src/ui/guides.js": "b92a449bc55977977524b53ef0281ea04789e945ba9174471bc1dff8c88016cb",
     "src/ui/learningProgress.js": "28dbefb3f8b5545dae4a5c25d7947085568890780c8108641276b7516bd3ba07",
     "src/ui/markdown.js": "8d44b9eb71ca92a08c345bae82a16d38eaa7876a3062cdc0e7a88a7a770882fb",
-    "src/ui/overview.js": "4648fe17cbc4f4e6ab0c582e62c523e834446ff874e3dd55d197c2a863160d40",
-    "src/ui/render.js": "3beaaa0930c878356de87c00d8150ead803c779e40eff313aafdee87effd3a37",
+    "src/ui/overview.js": "957f3e04526c61dfb3c3d7553ac4e72d3d8c8068354bf1deebf832ec07e6329b",
+    "src/ui/render.js": "c6ef2551d1c939e8e3a0faedf8f5a1a72e2e39b299c99d0d09e43d848b449fbb",
     "src/ui/sourceMedia.js": "25cbda86d6ff67702014a8361ae6c8963dd6d2c3ffb797f475bde4b971d0fa29",
     "src/ui/sourceReferences.js": "31f51decfd48cc5ea135a656a2b39e2970343cbf1e909087a13ac32941ef490a",
     "src/ui/sourceViewer.js": "dd749fb86171289c0f18449c4fa23b001e537224bec3ab0fd88a0c57d92e83aa",
@@ -89,12 +99,5 @@
     "assets/vendor/jszip/LICENSE.markdown": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4",
     "assets/vendor/jszip/license_header.js": "27873abeec2df3693480a8d1b8fe17dd61bee843d1b39c1c9cfab57ffe93099e",
     "assets/vendor/jszip/SOURCE.json": "3304d9fd964b7c93e688b96b0ed21223793aee385c25b1054b78a3d12dbb1a08"
-  },
-  "fieldLocations": {
-    "options": "questions[].answers[].analysis",
-    "questionExplanation": "questions[].analysis.solution.explanation",
-    "groups": "annotation.relationships.taskGroups / objectiveGroups",
-    "groupMembership": "questions[].analysis.relationships",
-    "unfinishedQuestions": "questions[].analysis.status"
   }
 }

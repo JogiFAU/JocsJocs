@@ -1,4 +1,5 @@
 import {configGuideHtml,sessionGuideHtml} from './guides.js';
+import {sessionDisplayName} from '../quiz/sessionRecord.js';
 import {learningProgressHtml} from './learningProgress.js';
 import {explanationHtml,overviewHtml} from "./overview.js";
 import {renderStudyUi,studySummaryHtml,studyConfigurationStats} from "../study/ui.js";
@@ -259,7 +260,11 @@ export function renderHeaderProgress() {
                     state.view === "review" ? "Auswertung" :
                     state.view === "search" ? "Suchmodus" : state.view === "overview" ? "Übersicht" : "Konfiguration";
 
-  subtitle.textContent = `${state.activeDataset.label || state.activeDataset.id} · ${modeLabel}${state.sessionName && ['quiz','review'].includes(state.view)?' · '+state.sessionName:''}`;
+  const subject=state.activeDataset.label || state.activeDataset.id;
+  const runName=['quiz','review'].includes(state.view)
+    ? sessionDisplayName({name:state.sessionName,quizConfig:state.quizConfig,questionOrder:state.questionOrder})
+    : null;
+  subtitle.textContent = [subject,runName,modeLabel].filter(Boolean).join(' · ');
 
   if (state.view !== "quiz" && state.view !== "review") {
     progText.textContent = "—";

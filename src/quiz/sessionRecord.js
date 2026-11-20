@@ -1,4 +1,4 @@
-import {hash32} from '../utils.js';
+import {examDisplayName,hash32} from '../utils.js';
 // Backwards-compatible descriptions of local query records.
 export function questionSignature(question) {
   return String(hash32(JSON.stringify([question.text,question.answers.map(a=>[a.id,a.text]),question.correctIndices])));
@@ -11,10 +11,19 @@ export function sessionAvailability(session,questions) {
     changed:ids.filter(id=>current.has(id) && session.questionSignatures?.[id] && session.questionSignatures[id]!==questionSignature(current.get(id))).length};
 }
 export function sessionDisplayName(session) {
-  if (typeof session.name==='string' && session.name.trim()) return session.name;
-  if (typeof session.quizConfig?.runName==='string' && session.quizConfig.runName.trim()) return session.quizConfig.runName;
-  const date=new Date(session.createdAt || session.updatedAt || 0).toLocaleString('de-DE');
-  return `Abfrage · ${date} · ${(session.questionOrder || []).length} Fragen · ${String(session.id || '').slice(-4)}`;
+  const config=session.quizConfig || {};
+  if (typeof config.runName==='string' && config.runName.trim()) return config.runName.trim();
+  const stored=typeof session.name==='string' ? session.name.trim() : '';
+  const auto=/^(Abfrage|High Impact|Wiederholung|Nur falsche) · .+ · \d+ Fragen · \d{1,2}\.\d{1,2}\.\d{4}, \d{1,2}:\d{2}:\d{2}(?: \(\d+\))?$/;
+  if (stored && !auto.test(stored)) return stored;
+
+  const count=session.questionOrder?.length ?? 0;
+  const exams=config.exams || [];
+  let title=exams.length===1 ? `Abfrage ${examDisplayName(exams[0])}` : 'Abfrage eigene Auswahl';
+  if (config.repeatMode==='all') title='Wiederholung';
+  if (config.repeatMode==='wrong') title='Nur falsche';
+  if (config.highImpact) title='High Impact';
+  return `${title} - ${count} ${count===1?'Frage':'Fragen'}`;
 }
 
 export function sessionProgress(session) {

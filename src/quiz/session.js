@@ -11,7 +11,7 @@ function newSessionId() {
 
 export function startQuizSession({ subset, config }) {
   if (!subset.length) throw Error('Keine Fragen für diese Abfrage ausgewählt.');
-  const existing=listSessions(state.activeDataset.id).map(sessionDisplayName);
+  const existing=listSessions(state.activeDataset.id).map(session=>session.name);
   resetQuizSession();
   state.view = "quiz";
   state.quizConfig = config;
@@ -169,7 +169,7 @@ export function hydrateQuizSessionFromStorage(session) {
   resetQuizSession();
 
   state.currentSessionId = session.id;
-  state.sessionName=sessionDisplayName(session);
+  state.sessionName=session.name || sessionDisplayName(session);
   state.quizConfig = session.quizConfig || null;
   state.questionOrder = Array.isArray(session.questionOrder) ? session.questionOrder.slice() : [];
 

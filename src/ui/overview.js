@@ -1,7 +1,28 @@
 import {progressBarHtml} from './learningProgress.js';
 import {sessionDisplayName,sessionProgress,sessionAvailability} from '../quiz/sessionRecord.js';
+import {examDisplayName} from '../utils.js';
 
 const escape=value=>String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const sessionDate=new Intl.DateTimeFormat('de-DE',{
+  day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',
+});
+const impactScopes={allExams:'Alle Klausuren',recent:'Letzte 5 Klausuren',filtered:'Eigene Auswahl'};
+
+function filterSummary(config) {
+  if (config.highImpact) {
+    const {targetPercent,nominalQuestions,scope}=config.highImpact.parameters || {};
+    return [
+      Number.isFinite(targetPercent) && `${targetPercent} %`,
+      Number.isFinite(nominalQuestions) && `${nominalQuestions} Fragen`,
+      impactScopes[scope],
+    ].filter(Boolean).join(', ') || 'High Impact';
+  }
+  const exams=config.exams || [];
+  if (exams.length===1) return examDisplayName(exams[0]);
+  if (exams.length>1) return `${exams.length} Klausuren`;
+  return 'Eigener Filter';
+}
 
 export function explanationHtml(welcome=false) {
   return `<section class="hero welcomeCard">
@@ -23,11 +44,17 @@ export function overviewHtml(sessions,questions) {
     const availability=sessionAvailability(session,questions);
     const disabled=availability.missing || availability.changed || !progress.total ? 'disabled':'';
     const id=escape(session.id),name=escape(sessionDisplayName(session));
-    return `<article class="queryRecord" data-query-mode="${session.quizConfig?.quizMode==='exam'?'exam':'practice'}">
-      <h3>${name}</h3>
-      <p class="small">${session.quizConfig?.highImpact?'High Impact · ':''}${session.quizConfig?.quizMode==='exam'?'Prüfungsmodus':'Übungsmodus'} · ${new Date(session.updatedAt || session.createdAt || 0).toLocaleString('de-DE')} · ${progress.finished?'Abgeschlossen':'Offen'}</p>
-      ${progressBarHtml({...progress,wrong:progress.wrongIds.length},session.quizConfig?.quizMode==='exam')}
-      <p>${progress.answered} / ${progress.total} Fragen beantwortet${progress.finished || session.quizConfig?.quizMode!=='exam'?' · '+progress.correct+' richtig · '+progress.wrongIds.length+' falsch':''}</p>
+    const config=session.quizConfig || {};
+    const exam=config.quizMode==='exam';
+    const timestamp=new Date(session.updatedAt || session.createdAt || 0);
+    const date=Number.isFinite(timestamp.getTime()) && (session.updatedAt || session.createdAt)
+      ? ` · ${sessionDate.format(timestamp)}` : '';
+    const percent=progress.answered ? Math.round(100*progress.correct/progress.answered) : 0;
+    return `<article class="queryRecord" data-query-mode="${exam?'exam':'practice'}">
+      <h3>${config.highImpact?'<span role="img" aria-label="High Impact">⚡</span> · ':''}${name}</h3>
+      <p class="small">${progress.finished?'Abgeschlossen':'Offen'} · ${escape(filterSummary(config))}${date}</p>
+      <p>${progress.answered}/${progress.total} Fragen · ${exam?'Prüfungsmodus':`${percent} % richtig`}</p>
+      ${progressBarHtml({...progress,wrong:progress.wrongIds.length},exam)}
       ${availability.missing || availability.changed?`<p class="small">${availability.missing} Fragen fehlen, ${availability.changed} Fragen wurden geändert. Bitte den passenden Fachstand laden.</p>`:''}
       <div class="queryActions">
         <button class="btn" data-query-action="open" data-query-id="${id}" ${disabled}>${progress.finished?'Ergebnis ansehen':'Fortsetzen'}</button>

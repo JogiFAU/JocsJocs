@@ -1,0 +1,91 @@
+{
+  "subject": "Radiologie und Strahlenfächer – Modul 1 (LMU)",
+  "superTopics": [
+    {
+      "name": "Strahlenphysik & Strahlenschutz",
+      "subtopics": [
+        "Strahlung, Zerfälle, Materiewechselwirkung",
+        "physikalische Einheiten",
+        "Strahlenschutz"
+      ]
+    },
+    {
+      "name": "Strahlenbiologie & Strahlenwirkung",
+      "subtopics": [
+        "biologische Strahlenwirkung",
+        "Deterministische vs. stochastische Effekte",
+        "Strahlenbiologie"
+      ]
+    },
+    {
+      "name": "Radiologische Bildgebung",
+      "subtopics": [
+        "Röntgen",
+        "CT",
+        "MRT",
+        "Sonographie",
+        "Kontrastmittel"
+      ]
+    },
+    {
+      "name": "Thorax, Herz & Gefäße",
+      "subtopics": [
+        "Herzinsuffizienz & thorakale Notfälle",
+        "Entzündliche & granulomatöse Lungenerkrankungen",
+        "Thorakale Tumoren & intrapulmonale Metastasen",
+        "Gefäßerkrankungen & Lungenembolie"
+      ]
+    },
+    {
+      "name": "Abdomen & Becken",
+      "subtopics": [
+        "Akutes Abdomen & Abdomendiagnostik",
+        "Entzündliche & infektiöse Abdominalerkrankungen",
+        "abdominelle Raumforderungen & Pädiatrie"
+      ]
+    },
+    {
+      "name": "Muskuloskelettales System",
+      "subtopics": [
+        "Traumatologie & Frakturdiagnostik",
+        "Degenerative Erkrankungen",
+        "Entzündliche Erkrankungen",
+        "Knochentumoren & Skelettläsionen"
+      ]
+    },
+    {
+      "name": "Neurokranium & Interventionelle Radiologie",
+      "subtopics": [
+        "Zerebrovaskuläre Notfälle",
+        "Intrakranielle Tumoren & Neuroanatomie",
+        "Interventionelle Radiologie"
+      ]
+    },
+    {
+      "name": "Nuklearmedizin I: Organdiagnostik",
+      "subtopics": [
+        "Grundprinzipien",
+        "Endokrinologische Diagnostik",
+        "Szintigraphie"
+      ]
+    },
+    {
+      "name": "Nuklearmedizin II: Hybridbildgebung & Therapie",
+      "subtopics": [
+        "Technik & Prinzip",
+        "Spezialtracer",
+        "Radioiodtherapie",
+        "Theranostik, Radioligandentherapie"
+      ]
+    },
+    {
+      "name": "Strahlentherapie (Radioonkologie)",
+      "subtopics": [
+        "Grundlagen",
+        "Bestrahlungstechnologien & Spezialtechniken",
+        "Klinische Indikationen",
+        "radiogene Nebenwirkungen"
+      ]
+    }
+  ]
+}
