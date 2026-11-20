@@ -1,6 +1,7 @@
 // Read-only compatibility for pre-2.0 datasets. Never used by the canonical writer.
 import { decodeHtmlEntities, normSpace } from "../utils.js";
 import { collectSourceMedia } from "./sourceMedia.js";
+import { markedAnswerIndices, normalizeAnswerIndices } from "./answerKey.js";
 import {
   evaluateAiChangedLabel,
   resolveAiDisplayText
@@ -35,38 +36,6 @@ function restoreQuestionLineBreaks(value) {
     .replace(/([?:.!])\s+(?=[A-E][).]\s+)/g, "$1\n")
     .replace(/([?:.!])\s+(?=\d+[).]\s+)/g, "$1\n")
     .trim();
-}
-
-function normalizeIndices(indices, answerCount = null, answers = null) {
-  if (!Array.isArray(indices)) return [];
-  const normalized = indices
-    .map(x => Number(x))
-    .filter(Number.isInteger)
-    .sort((a, b) => a - b);
-
-  if (!normalized.length) return [];
-
-  const canBeOneBased = Number.isInteger(answerCount) && answerCount > 0
-    && normalized.every((idx) => idx >= 1 && idx <= answerCount);
-  const hasZeroBasedOnlyIndex = Number.isInteger(answerCount) && answerCount > 0
-    && normalized.some((idx) => idx === 0 || idx >= answerCount);
-
-  if (canBeOneBased && !normalized.includes(0)) {
-    const oneBased = normalized.map((idx) => idx - 1);
-    const answerList = Array.isArray(answers) ? answers : [];
-    const zeroBasedScore = normalized.filter((idx) => answerList[idx]?.isCorrect === true).length;
-    const oneBasedScore = oneBased.filter((idx) => answerList[idx]?.isCorrect === true).length;
-
-    if (normalized.some((idx) => idx === answerCount) || oneBasedScore > zeroBasedScore) {
-      return oneBased;
-    }
-  }
-
-  if (hasZeroBasedOnlyIndex) {
-    return normalized.filter((idx) => idx >= 0 && idx < answerCount);
-  }
-
-  return normalized;
 }
 
 function normalizeAiSources(q) {
@@ -137,7 +106,7 @@ function normalizeAiSources(q) {
   return Array.from(new Set(out));
 }
 
-export function normalizeLegacyQuestion(q, jsonUrl) {
+export function normalizeLegacyQuestion(q, jsonUrl, indexBase) {
   const id = String(q.id || "").trim();
   if (!id) return null;
 
@@ -149,26 +118,15 @@ export function normalizeLegacyQuestion(q, jsonUrl) {
   const rawAnswers = Array.isArray(q.answers) ? q.answers : [];
   const answerCount = rawAnswers.length;
 
-  const originalCorrectIndices = q.aiAudit?.answerPlausibility?.indexBase === 0
-    ? (q.aiAudit.answerPlausibility.originalCorrectIndices || []).slice()
-    : normalizeIndices(
-    q.originalCorrectIndices ||
-    q.aiAudit?.answerPlausibility?.originalCorrectIndices,
-    answerCount,
-    rawAnswers
-  );
-
-  const finalCorrectIndices = q.aiAudit?.answerPlausibility?.indexBase === 0
-    ? (q.aiAudit.answerPlausibility.finalCorrectIndices || []).slice()
-    : normalizeIndices(
-    q.finalCorrectIndices ||
-    q.aiAudit?.answerPlausibility?.finalCorrectIndices ||
-    q.correctIndices,
-    answerCount,
-    rawAnswers
-  );
-
   const answerPlausibility = q.aiAudit?.answerPlausibility || {};
+  const auditBase = answerPlausibility.indexBase ?? indexBase;
+  const explicitOriginal = normalizeAnswerIndices(
+    q.originalCorrectIndices ?? answerPlausibility.originalCorrectIndices, answerCount, auditBase);
+  const originalCorrectIndices = explicitOriginal ?? (answerPlausibility.changedInDataset === true
+    ? [] : markedAnswerIndices(rawAnswers) ?? normalizeAnswerIndices(q.correctIndices, answerCount, indexBase) ?? []);
+  const finalCorrectIndices = normalizeAnswerIndices(
+    q.finalCorrectIndices ?? answerPlausibility.finalCorrectIndices, answerCount, auditBase) ?? originalCorrectIndices;
+
   const changedInDataset = answerPlausibility.changedInDataset;
   const aiDisagreesWithOriginalAnswer = answerPlausibility.aiDisagreesWithDataset === true;
   const aiChangedAnswersRaw = evaluateAiChangedLabel({
@@ -265,11 +223,11 @@ export function normalizeLegacyQuestion(q, jsonUrl) {
       q.aiAudit?.questionAbstraction?.text ||
       ""
     ) || null,
-    answers: (q.answers || []).map(a => ({
+    answers: rawAnswers.map((a, index) => ({
       text: cleanText(a.text || ""),
-      isCorrect: !!a.isCorrect
+      isCorrect: originalCorrectIndices.includes(index)
     })),
-    correctIndices: finalCorrectIndices,
+    correctIndices: originalCorrectIndices,
     imageFiles: Array.isArray(q.imageFiles) ? q.imageFiles.slice() : []
   };
 }

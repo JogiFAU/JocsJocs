@@ -2,6 +2,7 @@
 import { decodeHtmlEntities } from "../utils.js";
 import { collectSourceMedia } from "./sourceMedia.js";
 import { collectCheckedReferences } from "./sourceReferences.js";
+import { markedAnswerIndices, normalizeAnswerIndices } from "./answerKey.js";
 
 const text = value => String(decodeHtmlEntities(value ?? "")).replace(/\r\n?/g, "\n").trim();
 export function optionExplanation(answer) {
@@ -46,13 +47,26 @@ export function normalizeCurrentQuestion(q, dataset, jsonUrl) {
   const repetitionGroups = registry.comparisonVersion ? taskGroups : objectiveGroups;
   const primary = [...repetitionGroups].sort((x,y) => y.knownExamCount-x.knownExamCount || y.occurrences-x.occurrences || x.groupId.localeCompare(y.groupId))[0];
   const optionExplanations = q.answers.map((answer, answerIndex) => ({ answerIndex, text:optionExplanation(answer,answerIndex) })).filter(a => a.text);
-  const original = a.originalAnswerKey?.status === "provided" ? new Set(a.originalAnswerKey.optionIds) : new Set();
-  const correct = q.answers.flatMap((answer, index) => original.has(answer.analysis.optionId) ? [index] : []);
+  const ids = q.answers.map(answer => answer.analysis.optionId);
+  const key = a.originalAnswerKey;
+  const keyIds = key?.status === "provided" && Array.isArray(key.optionIds) &&
+    new Set(ids).size === ids.length && key.optionIds.every(id => ids.includes(id))
+    ? new Set(key.optionIds) : null;
+  const derived = keyIds ? ids.flatMap((id, index) => keyIds.has(id) ? [index] : []) : null;
+  const correct = markedAnswerIndices(q.answers) ??
+    normalizeAnswerIndices(q.correctIndices, ids.length, dataset.meta?.answerIndexBase) ?? derived ?? [];
+  const disputedKey = derived && derived.join() !== correct.join();
+  const selected = a.solution?.selectedOptionIds;
+  const aiDisagrees = disputedKey
+    ? correct.length > 0 && Array.isArray(selected) && selected.length > 0 &&
+      (new Set(selected).size !== correct.length || correct.some(index => !selected.includes(ids[index])))
+    : a.originalComparison === "differs";
   const issues = [...(a.quality?.inputIssues || []), ...(a.quality?.evidenceIssues || []), ...(a.quality?.conflicts || []),
     ...(a.diagnostics?.inputIssues || []), ...(a.visualRetrievalWarnings || [])];
   if (a.status !== "supported") issues.push(a.status);
-  if (a.originalComparison === "differs") issues.push("KI-Vorschlag weicht vom Eingabeschlüssel ab; fachlich prüfen.");
-  if (a.originalAnswerKey?.status !== "provided") issues.push("Kein verlässlich zuordenbarer Eingabeschlüssel.");
+  if (aiDisagrees) issues.push("KI-Vorschlag weicht vom Eingabeschlüssel ab; fachlich prüfen.");
+  if (disputedKey) issues.push("Exportierter Lösungsschlüssel weicht von den Originaldaten ab.");
+  if (!correct.length) issues.push("Kein verlässlich zuordenbarer Eingabeschlüssel.");
   if (a.diagnostics?.error) issues.push(a.diagnostics.error);
   const summary = text(a.solution?.explanation);
   const checkedReferences = collectCheckedReferences(q, dataset, jsonUrl);
@@ -69,9 +83,9 @@ export function normalizeCurrentQuestion(q, dataset, jsonUrl) {
       occurrences:(registry.occurrences || []).filter(o => [...objectiveGroups,...taskGroups].some(g=>g.members.includes(o.occurrenceId)))},
     examName:q.examName || null, examYear:q.examYear == null ? null : Number(q.examYear),
     text:text(q.questionText), explanation:text(q.explanationText) || null,
-    answers:q.answers.map(answer => ({id:answer.analysis.optionId,text:text(answer.text),isCorrect:original.has(answer.analysis.optionId)})),
+    answers:q.answers.map((answer,index) => ({id:answer.analysis.optionId,text:text(answer.text),isCorrect:correct.includes(index)})),
     correctIndices:correct, originalCorrectIndices:correct, imageFiles:Array.isArray(q.imageFiles) ? q.imageFiles.slice() : [],
-    reconstructedQuestion:null, aiChangedAnswers:false, aiDisagreesWithOriginalAnswer:a.originalComparison === "differs",
+    reconstructedQuestion:null, aiChangedAnswers:false, aiDisagreesWithOriginalAnswer:aiDisagrees,
     aiReasonDetailed:summary, aiOptionExplanations:optionExplanations,
     aiCorrectnessExplanation:null, aiCorrectnessExplanationIndices:[],aiWrongOptionExplanations:[],
     aiSuperTopic:topic?.superTopicName || null, aiSubtopic:topic?.subtopicName || null, aiTopicReason:text(a.topicMapping?.reason) || null,

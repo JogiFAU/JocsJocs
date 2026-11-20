@@ -9,17 +9,16 @@ import { isMultiCorrect, getCorrectIndices, evaluate } from "../quiz/evaluate.js
 import { submitAnswer, unsubmitAnswer, persistCurrentQuizSession } from "../quiz/session.js";
 import { getImageUrl } from "../data/zipImages.js";
 import { optionKnowledgeLabel } from "../data/currentDataset.js";
-import { qMetaHtml, buildExplainPrompt, lockedHint } from "./components.js";
+import { qMetaHtml, lockedHint } from "./components.js";
 import { renderAiMarkdown } from "./markdown.js";
 import { renderSourceMedia, sourcesVisible } from "./sourceMedia.js";
+import { renderComments } from "./comments.js";
 import { sourceReferencesHtml } from "./sourceReferences.js";
-import { renderAnalysisDetails } from "./analysisDetails.js";
 import { questionIdIndex } from "../quiz/filters.js";
 import { getLatestAnsweredResultsByQuestion, saveLocalQuestionOverride, listSessions } from "../data/storage.js";
 import { getQuizQuestionVariant, applyLocalQuestionOverride } from "../quiz/questionVariant.js";
 
 const MAX_RENDER_NO_PAGING = 1000;
-let notebookLmWindow = null;
 let renderGeneration = 0;
 
 function getThemeTokens() {
@@ -1143,35 +1142,6 @@ export function renderPager(totalCount, suffix="") {
   return { page, pageSize, totalPages };
 }
 
-async function notebookExplain(q) {
-  const nb = state.activeDataset?.notebookUrl;
-  const prompt = buildExplainPrompt(q, state.answers.get(q.id) || []);
-
-  try {
-    await navigator.clipboard.writeText(prompt);
-    toast("Fragen-Prompt wurde in die Zwischenablage kopiert.");
-  } catch {
-    toast("Prompt konnte nicht automatisch kopiert werden (Browser-Rechte).");
-  }
-
-  if (!nb) {
-    toast("Kein Notebook-Link im Datensatz hinterlegt.");
-    return;
-  }
-
-  if (notebookLmWindow && !notebookLmWindow.closed) {
-    try {
-      if (notebookLmWindow.location?.href !== nb) notebookLmWindow.location.href = nb;
-      notebookLmWindow.focus();
-      return;
-    } catch {
-      notebookLmWindow = null;
-    }
-  }
-
-  notebookLmWindow = window.open(nb, "_blank");
-}
-
 function renderToc() {
   const list = $("tocList");
   const summary = $("tocSummary");
@@ -2016,8 +1986,8 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions, generation }
     if (sourcesVisible({ view:state.view, showSolutions, submitted, quizMode:getQuizMode() })) {
       const sources = renderSourceMedia(q.aiSourceMedia);
       if (sources) card.appendChild(sources);
-      const details = renderAnalysisDetails(q);
-      if (details) card.appendChild(details);
+      const comments = renderComments(q);
+      if (comments) card.appendChild(comments);
     }
 
     if (q.aiChangedAnswers && allowSubmit && submitted && showSolutions) {
@@ -2038,12 +2008,9 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions, generation }
       card.appendChild(oldCorrectInfo);
     }
 
-    let actionsRow = null;
-    let editorActionBtn = null;
     if (allowSubmit) {
       const actions = document.createElement("div");
       actions.className = "actions";
-      actionsRow = actions;
 
       const submitBtn = document.createElement("button");
       submitBtn.className = "btn";
@@ -2077,7 +2044,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions, generation }
         await renderAll();
       });
 
-      editorActionBtn = document.createElement("button");
+      const editorActionBtn = document.createElement("button");
       editorActionBtn.className = "btn editorInlineBtn";
       editorActionBtn.textContent = "✏️";
       editorActionBtn.title = "Frage lokal bearbeiten";
@@ -2097,7 +2064,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions, generation }
       if (!allowSubmit) {
         const actions = document.createElement("div");
         actions.className = "actions";
-        editorActionBtn = document.createElement("button");
+        const editorActionBtn = document.createElement("button");
         editorActionBtn.className = "btn editorInlineBtn";
         editorActionBtn.textContent = "✏️";
         editorActionBtn.title = "Frage lokal bearbeiten";
@@ -2106,46 +2073,7 @@ async function renderQuestionList(qs, { allowSubmit, showSolutions, generation }
         });
         actions.appendChild(editorActionBtn);
         card.appendChild(actions);
-        actionsRow = actions;
       }
-    }
-
-    // NotebookLM Explain
-    if (!allowSubmit || submitted) {
-      const explainWrap = document.createElement("div");
-      explainWrap.className = actionsRow ? "actions notebookActions notebookActions--inline" : "notebookActions";
-
-      const explainBtn = document.createElement("button");
-      explainBtn.className = "btn";
-      explainBtn.textContent = "In NotebookLM erklären";
-      explainBtn.addEventListener("click", async () => { await notebookExplain(q); });
-
-      const hint = document.createElement("div");
-      hint.className = "tooltipHint";
-
-      const hintBtn = document.createElement("button");
-      hintBtn.type = "button";
-      hintBtn.className = "tooltipHint__btn";
-      hintBtn.textContent = "?";
-      hintBtn.setAttribute("aria-label", "Hinweis zu NotebookLM");
-
-      const hintText = document.createElement("div");
-      hintText.className = "tooltipHint__text";
-      hintText.textContent = "Öffnet Notebook und kopiert einen Prompt zur Frage in die Zwischenablage, den du direkt im Chat einfügen kannst.";
-
-      hint.appendChild(hintBtn);
-      hint.appendChild(hintText);
-
-      explainWrap.appendChild(explainBtn);
-      explainWrap.appendChild(hint);
-      if (actionsRow) {
-        if (editorActionBtn && editorActionBtn.parentElement === actionsRow) {
-          actionsRow.insertBefore(explainWrap, editorActionBtn);
-        } else {
-          actionsRow.appendChild(explainWrap);
-        }
-      }
-      else card.appendChild(explainWrap);
     }
 
     if (generation !== renderGeneration) return;

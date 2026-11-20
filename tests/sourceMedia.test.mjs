@@ -49,8 +49,10 @@ test("sources never leak into hidden exam solutions", () => {
 
 test("actual dataset loader retains source image URLs without affecting original answer key", async () => {
   const fetch=globalThis.fetch;
-  globalThis.fetch=async()=>({ok:true,url:dataset,json:async()=>({questions:[{id:"q",questionText:"Test",
-    answers:[{id:"a",text:"A",isCorrect:true}],correctIndices:[0],aiAnalysis:{evidence:[entry]}}]})});
+  globalThis.fetch=async url=>url===dataset
+    ? {ok:true,url:dataset,json:async()=>({questions:[{id:"q",questionText:"Test",
+      answers:[{id:"a",text:"A",isCorrect:true}],correctIndices:[0],aiAnalysis:{evidence:[entry]}}]})}
+    : {ok:false,status:404};
   try {await loadJsonUrls([dataset]);} finally {globalThis.fetch=fetch;}
   assert.equal(state.questionsAll[0].aiSourceMedia[0].pageUrl,sourceAssetUrl(asset,dataset));
   assert.deepEqual(state.questionsAll[0].correctIndices,[0]);

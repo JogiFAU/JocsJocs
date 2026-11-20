@@ -5,6 +5,7 @@ import { loadJsonUrls } from "../src/data/loaders.js";
 import { state } from "../src/state.js";
 import { qMetaHtml } from "../src/ui/components.js";
 import { evaluate } from "../src/quiz/evaluate.js";
+import { normalizeLegacyQuestion } from "../src/data/legacyDataset.js";
 
 const groupId="f".repeat(64);
 test("model knowledge has a concise explicit label independent of explanation prose",()=>{
@@ -58,6 +59,38 @@ test("uses explicit option IDs for original scoring and keeps AI proposals separ
   assert.equal(q.optionAnalyses[1].knowledgeBasis,"model_knowledge_supplement");
   assert.equal(q.aiSourceMedia[0].pageUrl,"https://host.test/app/datasets/data-abc.sources/a.png");
   assert.deepEqual(q.aiSourceMedia[0].optionNumbers,[1]);
+});
+
+test("DocsDocs marks and a declared one-based key override shifted export IDs", () => {
+  const data = fixture();
+  data.meta.answerIndexBase = 1;
+  const raw = data.questions[0];
+  raw.correctIndices = [1];
+  raw.answers[0].isCorrect = true;
+  raw.answers[1].isCorrect = false;
+  for (const withFlags of [true, false]) {
+    if (!withFlags) for (const answer of raw.answers) delete answer.isCorrect;
+    const q = normalizeCurrentQuestion(raw, data, "data.json");
+    assert.deepEqual(q.correctIndices, [0]);
+    assert.deepEqual(q.answers.map(answer => answer.isCorrect), [true, false]);
+    assert.equal(evaluate(q, [0]), true);
+    assert.equal(evaluate(q, [1]), false);
+    assert.equal(q.aiDisagreesWithOriginalAnswer, false);
+  }
+});
+
+test("legacy scoring normalizes the declared base and excludes AI keys", () => {
+  const raw = { id: "q", answers: [{ text: "A" }, { text: "B" }], correctIndices: [1] };
+  assert.deepEqual(normalizeLegacyQuestion(raw, "data.json", 1).correctIndices, [0]);
+  assert.deepEqual(normalizeLegacyQuestion(raw, "data.json", 0).correctIndices, [1]);
+  const ambiguous = normalizeLegacyQuestion(raw, "data.json");
+  assert.deepEqual(ambiguous.correctIndices, []);
+  assert.equal(evaluate(ambiguous, []), false);
+  raw.aiAudit = { answerPlausibility: { indexBase: 0, changedInDataset: true,
+    originalCorrectIndices: [0], finalCorrectIndices: [1] } };
+  const annotated = normalizeLegacyQuestion(raw, "data.json", 1);
+  assert.deepEqual(annotated.correctIndices, [0]);
+  assert.equal(evaluate(annotated, [1]), false);
 });
 
 test("compact explanations contain only clinical prose while full structured details remain intact",()=>{

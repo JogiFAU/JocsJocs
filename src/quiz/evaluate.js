@@ -25,7 +25,7 @@ export function isMultiCorrect(q) {
 export function evaluate(q, selectedOriginalIndices, { preferOriginal = false } = {}) {
   const a = new Set(selectedOriginalIndices || []);
   const b = new Set(getCorrectIndices(q, { preferOriginal }));
-  if (a.size !== b.size) return false;
+  if (!b.size || a.size !== b.size) return false;
   for (const x of a) if (!b.has(x)) return false;
   return true;
 }

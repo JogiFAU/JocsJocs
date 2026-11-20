@@ -502,38 +502,61 @@ hr.sep { border:0; border-top:1px solid var(--border); margin:14px 0; }
   font-weight: 850;
 }
 
-.aiHintBox {
+.aiHintBox,
+.commentThread {
   margin-top: 10px;
   border: 1px solid var(--interactive-border-soft);
   border-radius: 10px;
   background: var(--surface-soft);
-  padding: 8px 12px;
+  overflow-wrap: anywhere;
 }
-.aiHintBox__title {
+.commentThread { border-color: var(--border); }
+:is(.aiHintBox, .commentThread) > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 9px;
   font-size: 12px;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   list-style: none;
 }
-.aiHintBox__title::-webkit-details-marker { display: none; }
-.aiHintBox__title::before {
-  content: "▸";
-  margin-right: 6px;
-  color: var(--muted);
+:is(.aiHintBox, .commentThread) > summary::-webkit-details-marker { display: none; }
+:is(.aiHintBox, .commentThread) > summary:hover {
+  background: var(--surface-hover);
+  color: var(--text);
 }
-.aiHintBox[open] .aiHintBox__title::before {
-  content: "▾";
+:is(.aiHintBox, .commentThread) > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+:is(.aiHintBox, .commentThread) > summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -3px 2px 0 auto;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+:is(.aiHintBox, .commentThread)[open] > summary::after {
+  margin-top: 3px;
+  transform: rotate(225deg);
 }
 .aiHintBox__body {
-  margin-top: 8px;
+  padding: 0 12px 8px;
 }
-.aiHintBox__text {
-  margin: 0;
+.aiHintBox__text,
+.commentThread p {
   font-size: 13px;
   line-height: 1.5;
   color: var(--text);
 }
+.aiHintBox__text { margin: 0; }
 .aiMarkdown > :first-child { margin-top: 0; }
 .aiMarkdown > :last-child { margin-bottom: 0; }
 /* Paragraph elements provide structure without adding gaps around inline
@@ -1627,6 +1650,37 @@ summary { cursor: pointer; color: var(--muted); }
 .analysisDetails summary { cursor: pointer; padding: 6px 0; }
 .analysisDetails details { margin-left: 12px; border-left: 1px solid var(--border); padding-left: 10px; }
 .analysisDetails__field { margin: 8px 0; }
+.commentThread__count {
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--selected-bg);
+  color: var(--text);
+  font-size: 11px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.commentThread > ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0 10px 10px;
+  list-style: none;
+}
+.commentThread > ol > li {
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-card);
+}
+.commentThread__byline { color: var(--muted); font-size: 13px; }
+.commentThread__byline strong { color: var(--text); }
+.commentThread p {
+  max-width: 72ch;
+  margin: 5px 0 0;
+  white-space: pre-wrap;
+}
 .sourceMedia summary { cursor: pointer; padding: 8px 0; }
 .sourceMedia__card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin: 10px 0; }
 .sourceMedia__card h4 { margin: 0 0 8px; overflow-wrap: anywhere; }
